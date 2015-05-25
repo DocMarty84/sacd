@@ -1,5 +1,8 @@
+ARCH = $(shell getconf LONG_BIT)
 CC = g++
-CFLAGS = -std=c++11 -g -Wall -O3
+CFLAGS_32 = -msse2
+CFLAGS_64 =
+CFLAGS = $(CFLAGS_$(ARCH)) -std=c++11 -g -Wall -O3
 #CFLAGS += -ggdb3
 VPATH = libdstdec:libdsd2pcm:libsacd
 C_SRCS := $(wildcard *.c)
