@@ -17,7 +17,7 @@ CPPFLAGS += $(foreach includedir,$(INCLUDE_DIRS),-I$(includedir))
 LDFLAGS += $(foreach librarydir,$(LIBRARY_DIRS),-L$(librarydir))
 LDFLAGS += $(foreach library,$(LIBRARIES),-l$(library))
 
-.PHONY: all clean
+.PHONY: all clean install
 
 all: clean dst_ac dst_memory dst_data ccp_calc dst_unpack dst_fram dst_init dst_decoder \
      upsampler_p dsdpcm_converter_hq dsdpcm_converter \
@@ -84,3 +84,9 @@ sacd: dst_memory.o ccp_calc.o dst_init.o dst_data.o dst_unpack.o dst_fram.o dst_
 
 clean:
 	rm -f sacd *.o $(foreach librarydir,$(LIBRARY_DIRS),$(librarydir)/*.o)
+
+install: sacd
+
+	install -d $(DESTDIR)/usr/bin
+	install ./sacd $(DESTDIR)/usr/bin
+
