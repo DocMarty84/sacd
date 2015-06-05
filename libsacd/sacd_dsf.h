@@ -1,19 +1,21 @@
 /*
-* Copyright (c) 2011-2012 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU Lesser General Public
-* License as published by the Free Software Foundation; either
-* version 2.1 of the License, or (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-* Lesser General Public License for more details.
-*
-* You should have received a copy of the GNU Lesser General Public
-* License along with FFmpeg; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+    Copyright 2015 Robert Tari <robert.tari@gmail.com>
+    Copyright 2011-2012 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
+
+    This file is part of SACD.
+
+    SACD is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    SACD is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
 #ifndef _SACD_DSF_H_INCLUDED
@@ -50,7 +52,7 @@ class sacd_dsf_t : public sacd_reader_t {
     int                 m_channel_count;
     int                 m_loudspeaker_config;
     uint64_t            m_file_size;
-    std::vector<uint8_t>    m_block_data;
+    vector<uint8_t>    m_block_data;
     int                 m_block_size;
     int                 m_block_offset;
     int                 m_block_data_end;
@@ -60,7 +62,7 @@ class sacd_dsf_t : public sacd_reader_t {
     uint64_t            m_read_offset;
     bool                m_is_lsb;
     uint64_t            m_id3_offset;
-    std::vector<uint8_t>    m_id3_data;
+    vector<uint8_t>    m_id3_data;
     uint8_t             swap_bits[256];
 public:
     sacd_dsf_t();
@@ -76,11 +78,11 @@ public:
     double get_duration();
     double get_duration(uint32_t subsong);
     bool is_dst();
-    bool open(sacd_media_t* p_file, uint32_t mode = 0);
+    int open(sacd_media_t* p_file, uint32_t mode = 0);
     bool close();
     void set_area(area_id_e area_id);
     void set_emaster(bool emaster);
-    bool set_track(uint32_t track_number, area_id_e area_id = AREA_BOTH, uint32_t offset = 0);
+    string set_track(uint32_t track_number, area_id_e area_id = AREA_BOTH, uint32_t offset = 0);
     bool read_frame(uint8_t* frame_data, int* frame_size, frame_type_e* frame_type);
     bool seek(double seconds);
     bool commit();

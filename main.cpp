@@ -1,3 +1,23 @@
+/*
+    Copyright 2015 Robert Tari <robert.tari@gmail.com>
+    Copyright 2012 Vladislav Goncharov <vl-g@yandex.ru>
+    Copyright 2012 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
+
+    This file is part of SACD.
+
+    SACD is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    SACD is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
+*/
 
 #include <vector>
 #include <string>
@@ -7,25 +27,32 @@
 #include <locale>
 #include <getopt.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <linux/limits.h>
 #include "libsacd/sacd_reader.h"
 #include "libsacd/sacd_disc.h"
 #include "libsacd/sacd_dsdiff.h"
 #include "libsacd/sacd_dsf.h"
+#include "libsacd/version.h"
 #include "libdsd2pcm/dsdpcm_converter.h"
 #include "libdstdec/dst_decoder.h"
 
-#define VERSION "15.03.23"
-
-typedef struct _threadarg
+typedef struct
 {
     const char * strIn;
     const char * strOut;
     bool bProgressLine;
-    int i;
+
+} tThreadArgs;
+
+typedef struct
+{
+    int nTrack;
     pthread_t hThread;
     float fProgress;
+    tThreadArgs tArgs;
 
-} tThreadArg;
+} tTrackArgs;
 
 void packageInt(unsigned char * buf, int offset, int num, int bytes)
 {
@@ -39,14 +66,14 @@ void packageInt(unsigned char * buf, int offset, int num, int bytes)
     }
 }
 
-std::string toLower(const std::string& s)
+string toLower(const string& s)
 {
-    std::string result;
+    string result;
 
-    std::locale loc;
+    locale loc;
     for (unsigned int i = 0; i < s.length(); ++i)
     {
-        result += std::tolower(s.at(i), loc);
+        result += tolower(s.at(i), loc);
     }
 
     return result;
@@ -58,23 +85,21 @@ class input_sacd_t
     sacd_media_t* sacd_media;
     sacd_reader_t* sacd_reader;
     area_id_e area_id;
-    std::vector<uint8_t> dsd_buf;
+    vector<uint8_t> dsd_buf;
     int dsd_buf_size;
-    std::vector<uint8_t> dst_buf;
+    vector<uint8_t> dst_buf;
     int dst_buf_size;
-    std::vector<float> pcm_buf;
+    vector<float> pcm_buf;
     DstDec dst_decoder;
     dsdpcm_converter_t dsdpcm_convert;
     int dsd_samplerate;
     int framerate;
-    area_id_e m_tArea;
     bool m_bDstDecInit;
 
 public:
 
     bool track_completed;
     int pcm_out_channels;
-    int m_nTracks;
     unsigned int pcm_out_channel_map;
     float m_fProgress;
 
@@ -83,7 +108,6 @@ public:
         sacd_media = NULL;
         sacd_reader = NULL;
         sacd_reader = NULL;
-        m_tArea = AREA_MULCH;
         m_bDstDecInit = false;
         m_fProgress = 0;
     }
@@ -106,9 +130,11 @@ public:
         }
     }
 
-    void open(std::string p_path)
+    int open(string p_path)
     {
-        std::string ext = toLower(p_path.substr(p_path.length()-3, 3));
+        int nTracks = 0;
+
+        string ext = toLower(p_path.substr(p_path.length()-3, 3));
         media_type = UNK_TYPE;
 
         if (ext == "iso")
@@ -180,29 +206,27 @@ public:
             throw 100;
         }
 
-        if (!sacd_reader->open(sacd_media, 0))
+        if ((nTracks = sacd_reader->open(sacd_media, 0)) == 0)
         {
             printf("PANIC: exception_io_data\n");
             throw 100;
         }
 
-        m_nTracks = sacd_reader->get_track_count(AREA_MULCH);
-
-        if (m_nTracks == 0)
-        {
-            m_nTracks = sacd_reader->get_track_count(AREA_TWOCH);
-            m_tArea = AREA_TWOCH;
-        }
+        return nTracks;
     }
 
-    void decode_initialize(uint32_t nSubsong)
+    string decode_initialize(uint32_t nSubsong)
     {
         sacd_reader->set_emaster(0);
+        string strFileName = "";
 
-        if (!sacd_reader->set_track(nSubsong, m_tArea, 0))
+        if (sacd_reader->get_track_count(AREA_MULCH) != 0)
         {
-            printf("PANIC: exception_io\n");
-            throw 100;
+            strFileName = sacd_reader->set_track(nSubsong, AREA_MULCH, 0);
+        }
+        else
+        {
+            strFileName = sacd_reader->set_track(nSubsong, AREA_TWOCH, 0);
         }
 
         dsd_samplerate = sacd_reader->get_samplerate();
@@ -232,6 +256,8 @@ public:
         dsdpcm_convert.init(pcm_out_channels, dsd_samplerate, 96000);
         dsdpcm_convert.set_gain(0);
         track_completed = false;
+
+        return strFileName;
     }
 
     int decode(FILE * pFile)
@@ -334,7 +360,7 @@ public:
         return false;
     }
 
-    void writeData(FILE * pFile, std::vector<float> audio_data)
+    void writeData(FILE * pFile, vector<float> audio_data)
     {
         int nDst = audio_data.size() * 3;
         unsigned char * pDst = new unsigned char[nDst];
@@ -356,19 +382,18 @@ public:
     }
 };
 
-void * fnThread (void* threadarg)
+void * fnThread (void* threadargs)
 {
-    tThreadArg * ta = (tThreadArg *)threadarg;
+    tTrackArgs * ta = (tTrackArgs *)threadargs;
     input_sacd_t * pSacd = new input_sacd_t();
-    pSacd->open(ta->strIn);
-    pSacd->decode_initialize(ta->i);
+    pSacd->open(ta->tArgs.strIn);
+    string strOutFile = ta->tArgs.strOut + pSacd->decode_initialize(ta->nTrack);
 
     bool rd = true;
     unsigned int nSize = 0x7fffffff;
     unsigned char arrHeader[68];
     unsigned char arrFormat[2] = {0xFE, 0xFF};
     unsigned char arrSubtype[16] = {0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71};
-    char strTrack[256];
 
     memcpy (arrHeader, "RIFF", 4);
     packageInt (arrHeader, 4, nSize - 8, 4);
@@ -387,9 +412,7 @@ void * fnThread (void* threadarg)
     memcpy (arrHeader + 44, arrSubtype, 16);
     memcpy (arrHeader + 60, "data", 4);
     packageInt (arrHeader, 64, nSize - 68, 4);
-
-    sprintf(strTrack, "%s%02d.wav", ta->strOut, ta->i + 1);
-    FILE * pFile = fopen(strTrack, "wb");
+    FILE * pFile = fopen(strOutFile.data(), "wb");
     fwrite(arrHeader, 1, 68, pFile);
 
     while (pSacd->track_completed == false || rd == true)
@@ -410,9 +433,9 @@ void * fnThread (void* threadarg)
     return 0;
 }
 
-void * fnProgress (void* threadarg)
+void * fnProgress (void* threadargs)
 {
-    std::vector<tThreadArg> * arrTA = (std::vector<tThreadArg> *)threadarg;
+    vector<tTrackArgs> * arrTA = (vector<tTrackArgs> *)threadargs;
 
     while(1)
     {
@@ -425,7 +448,7 @@ void * fnProgress (void* threadarg)
 
         fProgress = fProgress / arrTA->size();
 
-        if (arrTA->at(0).bProgressLine)
+        if (arrTA->at(0).tArgs.bProgressLine)
         {
             printf("PROGRESS: %.2f\n",  fProgress);
         }
@@ -447,17 +470,16 @@ void * fnProgress (void* threadarg)
 
 int main(int argc, char* argv[])
 {
-    std::string strIn = "";
-    std::string strOut = "";
+    string strIn = "";
+    string strOut = "";
+    char strPath[PATH_MAX];
     int nOpt;
-    char * strProgramName = strrchr(argv[0], '/');
-    strProgramName = strProgramName ? strdup(strProgramName + 1) : strdup(argv[0]);
     bool bProgressLine = false;
     bool bPrintHelp = false;
 
     const char strHelpText[] =
     "\n"
-    "Usage: %s -i infile [-o outdir] [options]\n\n"
+    "Usage: sacd -i infile [-o outdir] [options]\n\n"
     "  -i, --infile         : Specify the input file (*.iso, *.dsf, *.dff)\n"
     "  -o, --outdir         : The folder to write the WAVE files to. If you omit\n"
     "                         this, the files will be placed in the input file's\n"
@@ -468,7 +490,6 @@ int main(int argc, char* argv[])
     "                         status/error message.\n"
     "  -h, --help           : Show this help message\n\n";
 
-    const char strOptionsString[] = "i:o:ph";
     const struct option tOptionsTable[] =
     {
         {"infile", required_argument, NULL, 'i' },
@@ -478,7 +499,7 @@ int main(int argc, char* argv[])
         { NULL, 0, NULL, 0 }
     };
 
-    while ((nOpt = getopt_long(argc, argv, strOptionsString, tOptionsTable, NULL)) >= 0)
+    while ((nOpt = getopt_long(argc, argv, "i:o:ph", tOptionsTable, NULL)) >= 0)
     {
         switch (nOpt)
         {
@@ -487,66 +508,79 @@ int main(int argc, char* argv[])
                 break;
             case 'o':
                 strOut = optarg;
-
-                if (strOut.compare(strOut.size() - 1, 1, "/") != 0)
-                {
-                    strOut += "/";
-                }
-
                 break;
             case 'p':
                 bProgressLine = true;
                 break;
-            case 'h':
+            default:
                 bPrintHelp = true;
                 break;
         }
     }
 
-    if (optind < argc)
+    if (bPrintHelp || argc == 1 || strIn.empty())
     {
-        bPrintHelp = true;
-    }
-
-    if (bPrintHelp)
-    {
-        fprintf(stdout, bProgressLine ? "PANIC: Invalid command-line syntax\n" : strHelpText, strProgramName);
-        free(strProgramName);
+        printf(bProgressLine ? "PANIC: Invalid command-line syntax\n" : strHelpText);
         return 0;
     }
+
+    struct stat tStat;
+
+    if (stat(strIn.c_str(), &tStat) == -1 || !S_ISREG(tStat.st_mode))
+    {
+        printf("PANIC: Input file does not exist\n");
+        return 0;
+    }
+
+    strIn = realpath(strIn.data(), strPath);
 
     if (strOut.empty())
     {
         strOut = strIn.substr(0, strIn.find_last_of("/") + 1);
     }
 
+    if (strOut.empty() || stat(strOut.c_str(), &tStat) == -1 || !S_ISDIR(tStat.st_mode))
+    {
+        printf("PANIC: Output directory does not exist\n");
+        return 0;
+    }
+
+    strOut = realpath(strOut.data(), strPath);
+
+    if (strOut.compare(strOut.size() - 1, 1, "/") != 0)
+    {
+        strOut += "/";
+    }
+
     input_sacd_t * pSacd = new input_sacd_t();
-    pSacd->open(strIn);
-    int nTracks = pSacd->m_nTracks;
+    int nTracks = pSacd->open(strIn);
     delete pSacd;
-    std::vector<tThreadArg> arrThreadArgs(nTracks);
+
+    tThreadArgs tArgs;
+    tArgs.strIn = strIn.c_str();
+    tArgs.strOut = strOut.c_str();
+    tArgs.bProgressLine = bProgressLine;
+    vector<tTrackArgs> arrTracks(nTracks);
     pthread_t hProgressThread;
 
     time_t now = time(0);
 
     if (!bProgressLine)
     {
-        printf("\n\nsacd - Command-line SACD decoder version %s\n\n", VERSION);
+        printf("\n\nsacd - Command-line SACD decoder version %s\n\n", APPVERSION);
     }
 
     for (int i = 0; i < nTracks; i++)
     {
-        arrThreadArgs[i].strIn = strIn.c_str();
-        arrThreadArgs[i].strOut = strOut.c_str();
-        arrThreadArgs[i].i = i;
-        arrThreadArgs[i].bProgressLine = bProgressLine;
-        arrThreadArgs[i].fProgress = 0.0;
+        arrTracks[i].nTrack = i;
+        arrTracks[i].fProgress = 0.0;
+        arrTracks[i].tArgs = tArgs;
 
-        pthread_create(&arrThreadArgs[i].hThread, NULL, fnThread, &arrThreadArgs[i]);
-        pthread_detach(arrThreadArgs[i].hThread);
+        pthread_create(&arrTracks[i].hThread, NULL, fnThread, &arrTracks[i]);
+        pthread_detach(arrTracks[i].hThread);
     }
 
-    pthread_create(&hProgressThread, NULL, fnProgress, &arrThreadArgs);
+    pthread_create(&hProgressThread, NULL, fnProgress, &arrTracks);
     pthread_join(hProgressThread, NULL);
 
     time_t after = time(0);

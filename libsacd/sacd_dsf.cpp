@@ -1,3 +1,23 @@
+/*
+    Copyright 2015 Robert Tari <robert.tari@gmail.com>
+    Copyright 2011-2012 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
+
+    This file is part of SACD.
+
+    SACD is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    SACD is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
+*/
+
 #include "sacd_dsf.h"
 
 #define MARK_TIME(m) ((double)m.hours * 60 * 60 + (double)m.minutes * 60 + (double)m.seconds + ((double)m.samples + (double)m.offset) / (double)m_samplerate)
@@ -71,29 +91,29 @@ bool sacd_dsf_t::is_dst() {
     return false;
 }
 
-bool sacd_dsf_t::open(sacd_media_t* p_file, uint32_t mode) {
+int sacd_dsf_t::open(sacd_media_t* p_file, uint32_t mode) {
     m_file = p_file;
     Chunk ck;
     FmtDSFChunk fmt;
     uint64_t pos;
     if (!(m_file->read(&ck, sizeof(ck)) == sizeof(ck) && ck.has_id("DSD "))) {
-        return false;
+        return 0;
     }
     if (ck.get_size() != hton64((uint64_t)28)) {
-        return false;
+        return 0;
     }
     if (m_file->read(&m_file_size, sizeof(m_file_size)) != sizeof(m_file_size)) {
-        return false;
+        return 0;
     }
     if (m_file->read(&m_id3_offset, sizeof(m_id3_offset)) != sizeof(m_id3_offset)) {
-        return false;
+        return 0;
     }
     pos = m_file->get_position();
     if (!(m_file->read(&fmt, sizeof(fmt)) == sizeof(fmt) && fmt.has_id("fmt "))) {
-        return false;
+        return 0;
     }
     if (fmt.format_id != 0) {
-        return false;
+        return 0;
     }
     m_version = fmt.format_version;
     switch (fmt.channel_type) {
@@ -119,11 +139,11 @@ bool sacd_dsf_t::open(sacd_media_t* p_file, uint32_t mode) {
         m_loudspeaker_config = 4;
         break;
     default:
-        return false;
+        return 0;
         break;
     }
     if (fmt.channel_count < 1 || fmt.channel_count > 6) {
-        return false;
+        return 0;
     }
     m_channel_count = fmt.channel_count;
     m_samplerate = fmt.samplerate;
@@ -136,7 +156,7 @@ bool sacd_dsf_t::open(sacd_media_t* p_file, uint32_t mode) {
         m_is_lsb = false;
         break;
     default:
-        return false;
+        return 0;
         break;
     }
     m_sample_count = fmt.sample_count;
@@ -147,14 +167,14 @@ bool sacd_dsf_t::open(sacd_media_t* p_file, uint32_t mode) {
 
     if (!(m_file->read(&ck, sizeof(ck)) == sizeof(ck) && ck.has_id("data")))
     {
-        return false;
+        return 0;
     }
 
     m_block_data.resize(m_channel_count * m_block_size);
     m_data_offset = m_file->get_position();
     m_data_size = hton64(ck.get_size()) - sizeof(ck);
     m_read_offset = m_data_offset;
-    return true;
+    return 1;
 }
 
 bool sacd_dsf_t::close() {
@@ -167,12 +187,13 @@ void sacd_dsf_t::set_area(area_id_e area_id) {
 void sacd_dsf_t::set_emaster(bool emaster) {
 }
 
-bool sacd_dsf_t::set_track(uint32_t track_number, area_id_e area_id, uint32_t offset) {
+string sacd_dsf_t::set_track(uint32_t track_number, area_id_e area_id, uint32_t offset) {
     if (track_number) {
-        return false;
+        return "";
     }
     m_file->seek(m_data_offset);
-    return true;
+
+    return m_file->getFileName();
 }
 
 bool sacd_dsf_t::read_frame(uint8_t* frame_data, int* frame_size, frame_type_e* frame_type)

@@ -1,3 +1,11 @@
+sacd (15.06.05) trusty; urgency=medium
+
+  * getopt error handling
+  * Automated versioning
+  * Target filenames from metadata
+
+ -- Robert Tari <robert.tari@gmail.com>  Fri, 05 Jun 2015 23:48:07 +0200
+
 sacd (15.05.25) trusty; urgency=medium
 
   * Initial release

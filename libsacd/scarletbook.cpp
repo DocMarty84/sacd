@@ -22,51 +22,51 @@
 #include "scarletbook.h"
 
 const char* character_set[] = {
-	"US-ASCII",
-	"ISO646-JP",
-	"ISO-8859-1",
-	"SHIFT_JISX0213",
-	"KSC5601.1987-0",
-	"GB2312.1980-0",
-	"BIG5",
-	"ISO-8859-1"
+    "US-ASCII",
+    "ISO646-JP",
+    "ISO-8859-1",
+    "SHIFT_JISX0213",
+    "KSC5636",//KSC5601.1987-0
+    "GB2312",
+    "BIG5",
+    "ISO-8859-1"
 };
 
 const char* album_genre[] = {
-	"Not used",
-	"Not defined",
-	"Adult Contemporary",
-	"Alternative Rock",
-	"Children's Music",
-	"Classical",
-	"Contemporary Christian",
-	"Country",
-	"Dance",
-	"Easy Listening",
-	"Erotic",
-	"Folk",
-	"Gospel",
-	"Hip Hop",
-	"Jazz",
-	"Latin",
-	"Musical",
-	"New Age",
-	"Opera",
-	"Operetta",
-	"Pop Music",
-	"RAP",
-	"Reggae",
-	"Rock Music",
-	"Rhythm & Blues",
-	"Sound Effects",
-	"Sound Track",
-	"Spoken Word",
-	"World Music",
-	"Blues"
+    "Not used",
+    "Not defined",
+    "Adult Contemporary",
+    "Alternative Rock",
+    "Children's Music",
+    "Classical",
+    "Contemporary Christian",
+    "Country",
+    "Dance",
+    "Easy Listening",
+    "Erotic",
+    "Folk",
+    "Gospel",
+    "Hip Hop",
+    "Jazz",
+    "Latin",
+    "Musical",
+    "New Age",
+    "Opera",
+    "Operetta",
+    "Pop Music",
+    "RAP",
+    "Reggae",
+    "Rock Music",
+    "Rhythm & Blues",
+    "Sound Effects",
+    "Sound Track",
+    "Spoken Word",
+    "World Music",
+    "Blues"
 };
 
 const char* album_category[] = {
-	"Not used",
-	"General",
-	"Japanese"
+    "Not used",
+    "General",
+    "Japanese"
 };

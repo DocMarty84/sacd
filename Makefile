@@ -76,7 +76,7 @@ sacd_dsdiff: scarletbook.h sacd_dsd.h sacd_reader.h endianess.h sacd_dsdiff.h sa
 sacd_dsf: scarletbook.h sacd_dsd.h sacd_reader.h endianess.h sacd_dsf.h sacd_dsf.cpp
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c libsacd/sacd_dsf.cpp -o libsacd/sacd_dsf.o
 
-main: sacd_reader.h sacd_disc.h sacd_dsdiff.h sacd_dsf.h dsdpcm_converter.h main.cpp
+main: version.h sacd_reader.h sacd_disc.h sacd_dsdiff.h sacd_dsf.h dsdpcm_converter.h main.cpp
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c main.cpp -o main.o
 
 sacd: dst_memory.o ccp_calc.o dst_init.o dst_data.o dst_unpack.o dst_fram.o dst_decoder.o dsdpcm_converter.o libdsd2pcm/dsdpcm_converter_hq.o sacd_media.o sacd_dsf.o sacd_dsdiff.o sacd_disc.o main.o

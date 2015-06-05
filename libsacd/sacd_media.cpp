@@ -1,19 +1,21 @@
 /*
-* Copyright (c) 2011-2012 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU Lesser General Public
-* License as published by the Free Software Foundation; either
-* version 2.1 of the License, or (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-* Lesser General Public License for more details.
-*
-* You should have received a copy of the GNU Lesser General Public
-* License along with FFmpeg; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+    Copyright 2015 Robert Tari <robert.tari@gmail.com>
+    Copyright 2011-2012 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
+
+    This file is part of SACD.
+
+    SACD is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    SACD is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
 #include <unistd.h>
@@ -36,6 +38,7 @@ bool sacd_media_file_t::open(const char* path)
     try
     {
         media_file = fopen(path, "r");
+        m_strFilePath = path;
         return true;
     }
     catch (...)
@@ -86,4 +89,10 @@ int64_t sacd_media_file_t::skip(int64_t bytes)
 int sacd_media_file_t::truncate(int64_t position)
 {
     return ftruncate(fileno(media_file), position);
+}
+
+string sacd_media_file_t::getFileName()
+{
+    m_strFilePath = m_strFilePath.substr(m_strFilePath.find_last_of("/") + 1, string::npos);
+    return m_strFilePath.substr(0, m_strFilePath.find_last_of(".")) + ".wav";
 }
