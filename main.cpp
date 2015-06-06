@@ -429,6 +429,7 @@ void * fnThread (void* threadargs)
     fclose(pFile);
 
     ta->fProgress = 100;
+    printf("%sFile %s completed.\n", ta->tArgs.bProgressLine ? "STATUS: " : "\n", strOutFile.data());
 
     return 0;
 }
