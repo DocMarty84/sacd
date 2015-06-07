@@ -386,7 +386,7 @@ void * fnThread (void* threadargs)
 {
     tTrackArgs * ta = (tTrackArgs *)threadargs;
     input_sacd_t * pSacd = new input_sacd_t();
-    pSacd->open(ta->tArgs.strIn);
+    int nTracks = pSacd->open(ta->tArgs.strIn);
     string strOutFile = ta->tArgs.strOut + pSacd->decode_initialize(ta->nTrack);
 
     bool rd = true;
@@ -429,7 +429,11 @@ void * fnThread (void* threadargs)
     fclose(pFile);
 
     ta->fProgress = 100;
-    printf("%sFile %s completed.\n", ta->tArgs.bProgressLine ? "STATUS: " : "\n", strOutFile.data());
+
+    if (ta->tArgs.bProgressLine)
+    {
+        printf("FILE\t%s\t%.2i\t%.2i\n", strOutFile.data(), ta->nTrack, nTracks);
+    }
 
     return 0;
 }
@@ -451,7 +455,7 @@ void * fnProgress (void* threadargs)
 
         if (arrTA->at(0).tArgs.bProgressLine)
         {
-            printf("PROGRESS: %.2f\n",  fProgress);
+            printf("PROGRESS\t%.2f\n", fProgress);
         }
         else
         {
@@ -584,8 +588,16 @@ int main(int argc, char* argv[])
     pthread_create(&hProgressThread, NULL, fnProgress, &arrTracks);
     pthread_join(hProgressThread, NULL);
 
-    time_t after = time(0);
-    printf("%sFinished in %d seconds.\n\n", bProgressLine ? "STATUS: " : "\n", (int)(after - now));
+    int nSeconds = time(0) - now;
+
+    if (bProgressLine)
+    {
+        printf("FINISHED\t%d\n", nSeconds);
+    }
+    else
+    {
+        printf("\nFinished in %d seconds.\n\n", nSeconds);
+    }
 
     return 0;
 }
