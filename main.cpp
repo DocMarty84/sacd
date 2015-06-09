@@ -432,7 +432,7 @@ void * fnThread (void* threadargs)
 
     if (ta->tArgs.bProgressLine)
     {
-        printf("FILE\t%s\t%.2i\t%.2i\n", strOutFile.data(), ta->nTrack, nTracks);
+        printf("FILE\t%s\t%.2i\t%.2i\n", strOutFile.data(), ta->nTrack + 1, nTracks);
     }
 
     return 0;
