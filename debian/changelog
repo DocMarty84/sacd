@@ -1,3 +1,9 @@
+sacd (15.06.15) trusty; urgency=medium
+
+  * Invalid files now do not throw exceptions, but exit gracefully
+
+ -- Robert Tari <robert.tari@gmail.com>  Mon, 15 Jun 2015 23:22:38 +0200
+
 sacd (15.06.10) trusty; urgency=medium
 
   * The -p switch prints a 1-based track index

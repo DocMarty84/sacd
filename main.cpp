@@ -157,7 +157,7 @@ public:
         if (media_type == UNK_TYPE)
         {
             printf("PANIC: exception_io_unsupported_format\n");
-            throw 100;
+            return 0;
         }
 
         sacd_media = new sacd_media_file_t();
@@ -165,7 +165,7 @@ public:
         if (!sacd_media)
         {
             printf("PANIC: exception_overflow\n");
-            throw 100;
+            return 0;
         }
 
         switch (media_type)
@@ -175,7 +175,7 @@ public:
                 if (!sacd_reader)
                 {
                     printf("PANIC: exception_overflow\n");
-                    throw 100;
+                    return 0;
                 }
                 break;
             case DSDIFF_TYPE:
@@ -183,7 +183,7 @@ public:
                 if (!sacd_reader)
                 {
                     printf("PANIC: exception_overflow\n");
-                    throw 100;
+                    return 0;
                 }
                 break;
             case DSF_TYPE:
@@ -191,25 +191,25 @@ public:
                 if (!sacd_reader)
                 {
                     printf("PANIC: exception_overflow\n");
-                    throw 100;
+                    return 0;
                 }
                 break;
             default:
                 printf("PANIC: exception_io_data\n");
-                throw 100;
+                return 0;
                 break;
         }
 
         if (!sacd_media->open(p_path.c_str()))
         {
             printf("PANIC: exception_io_data\n");
-            throw 100;
+            return 0;
         }
 
         if ((nTracks = sacd_reader->open(sacd_media, 0)) == 0)
         {
-            printf("PANIC: exception_io_data\n");
-            throw 100;
+            printf("PANIC: Failed to parse SACD media\n");
+            return 0;
         }
 
         return nTracks;
@@ -560,6 +560,11 @@ int main(int argc, char* argv[])
     input_sacd_t * pSacd = new input_sacd_t();
     int nTracks = pSacd->open(strIn);
     delete pSacd;
+
+    if (!nTracks)
+    {
+        exit(1);
+    }
 
     tThreadArgs tArgs;
     tArgs.strIn = strIn.c_str();
