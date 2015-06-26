@@ -53,7 +53,6 @@ public:
     virtual bool commit() = 0;
     virtual bool is_dst() = 0;
     virtual void set_area(area_id_e area_id) = 0;
-    virtual void set_emaster(bool emaster) = 0;
     virtual string set_track(uint32_t track_number, area_id_e area_id = AREA_BOTH, uint32_t offset = 0) = 0;
     virtual bool read_frame(uint8_t* frame_data, int* frame_size, frame_type_e* frame_type) = 0;
 };

@@ -184,9 +184,6 @@ bool sacd_dsf_t::close() {
 void sacd_dsf_t::set_area(area_id_e area_id) {
 }
 
-void sacd_dsf_t::set_emaster(bool emaster) {
-}
-
 string sacd_dsf_t::set_track(uint32_t track_number, area_id_e area_id, uint32_t offset) {
     if (track_number) {
         return "";

@@ -51,7 +51,6 @@ private:
     uint32_t             m_track_length_lsn;
     uint32_t             m_track_current_lsn;
     uint8_t              m_channel_count;
-    bool                 m_emaster;
     bool                 m_dst_encoded;
     audio_sector_t       m_audio_sector;
     audio_frame_t        m_frame;
@@ -86,7 +85,6 @@ public:
     bool is_dst();
     int open(sacd_media_t* p_file, uint32_t mode = 0);
     bool close();
-    void set_emaster(bool emaster);
     void set_area(area_id_e area_id);
     string set_track(uint32_t track_number, area_id_e area_id = AREA_BOTH, uint32_t offset = 0);
     bool read_frame(uint8_t* frame_data, int* frame_size, frame_type_e* frame_type);

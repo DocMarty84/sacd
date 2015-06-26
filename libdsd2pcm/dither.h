@@ -21,19 +21,17 @@
 #define _dither_h_
 
 // inline dithering implementation
-class Dither {
+class Dither
+{
 public:
     Dither(unsigned int n_bits);
     Dither& operator=(const Dither &obj);
-
     double  processSample(double x) { return (x + m_rand_max * (double)(fast_rand() - (RAND_MAX / 2)) / (double)(RAND_MAX / 2)); }
 
 protected:
-    double  m_rand_max;
-    int     m_holdrand;
-    
-    int     fast_rand() { return (((m_holdrand = m_holdrand * 214013L + 2531011L) >> 16) & 0x7fff); }   // libc rand() is too slow
+    double m_rand_max;
+    int m_holdrand;
+    int fast_rand() { return (((m_holdrand = m_holdrand * 214013L + 2531011L) >> 16) & 0x7fff); }   // libc rand() is too slow
 };
-
 
 #endif

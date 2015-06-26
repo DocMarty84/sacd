@@ -143,7 +143,6 @@ bool sacd_disc_t::g_is_sacd(const char p_drive)
 sacd_disc_t::sacd_disc_t()
 {
     m_audio_sector.header.dst_encoded = 0;
-    m_emaster = false;
     m_dst_encoded = false;
     m_sector_bad_reads = 0;
 }
@@ -402,38 +401,20 @@ bool sacd_disc_t::close()
     return true;
 }
 
-void sacd_disc_t::set_emaster(bool emaster) {
-    m_emaster = emaster;
-}
-
 void sacd_disc_t::set_area(area_id_e area_id) {
     m_track_area = area_id;
     m_dst_encoded = get_area(m_track_area) ? get_area(m_track_area)->area_toc->frame_format == FRAME_FORMAT_DST : false;
 }
 
-string sacd_disc_t::set_track(uint32_t track_number, area_id_e area_id, uint32_t offset) {
-    if (track_number < get_track_count(area_id)) {
+string sacd_disc_t::set_track(uint32_t track_number, area_id_e area_id, uint32_t offset)
+{
+    if (track_number < get_track_count(area_id))
+    {
         scarletbook_area_t* area = get_area(area_id);
         m_track_number = track_number;
         m_track_area = area_id;
-        if (!m_emaster) {
-            m_track_start_lsn = area->area_tracklist_offset->track_start_lsn[track_number];
-            m_track_length_lsn = area->area_tracklist_offset->track_length_lsn[track_number];
-        }
-        else {
-            if (track_number > 0) {
-                m_track_start_lsn = area->area_tracklist_offset->track_start_lsn[track_number];
-            }
-            else {
-                m_track_start_lsn = area->area_toc->track_start;
-            }
-            if (track_number < get_track_count(area_id) - 1) {
-                m_track_length_lsn = area->area_tracklist_offset->track_start_lsn[track_number + 1] - m_track_start_lsn + 1;
-            }
-            else {
-                m_track_length_lsn = area->area_toc->track_end - m_track_start_lsn;
-            }
-        }
+        m_track_start_lsn = area->area_tracklist_offset->track_start_lsn[track_number];
+        m_track_length_lsn = area->area_tracklist_offset->track_length_lsn[track_number];
         m_track_current_lsn = m_track_start_lsn + offset;
         m_channel_count = area->area_toc->channel_count;
         memset(&m_audio_sector, 0, sizeof(m_audio_sector));
@@ -448,6 +429,7 @@ string sacd_disc_t::set_track(uint32_t track_number, area_id_e area_id, uint32_t
 
         return s;
     }
+
     m_track_area = AREA_BOTH;
 
     return "";

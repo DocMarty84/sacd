@@ -17,34 +17,18 @@
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 */
 
-# include <xmmintrin.h>  // SSE2 inlines
-# include <sys/stat.h>   // mkdir
-
-# define _ASSERT(x)
-# define MAX_PATH    260
-
-#include <locale.h>     // setlocale
-#include <stdarg.h>     // va_list
-#include <stdio.h>      // snprintf
-#include <string.h>     // memset
-#include <stdio.h>      // sprintf
-#include <stdlib.h>     // rand
-
-#define _USE_MATH_DEFINES
+#include <xmmintrin.h>  // SSE2 inlines
 #include <math.h>
 #include "dither.h"
 
-/*
- * prepare 32-bit versions
- */
-
-#define FIR_DOUBLE_PRECISION    0
+//prepare 32-bit versions
+#define FIR_DOUBLE_PRECISION 0
 
 // can't use templates due to memory align and SSE use
-#define FirHistory      FirHistory_32
-#define FirFilter       FirFilter_32
-#define DownsamplerNx   DownsamplerNx_32
-#define ResamplerNxMx   ResamplerNxMx_32
+#define FirHistory FirHistory_32
+#define FirFilter FirFilter_32
+#define DownsamplerNx DownsamplerNx_32
+#define ResamplerNxMx ResamplerNxMx_32
 
 #include "upsampler.cpp"
 
@@ -55,17 +39,14 @@
 
 #undef FIR_DOUBLE_PRECISION
 
-/*
- * prepare 64-bit versions
- */
-
-#define FIR_DOUBLE_PRECISION    1
+//prepare 64-bit versions
+#define FIR_DOUBLE_PRECISION 1
 
 // can't use templates due to memory align and SSE use
-#define FirHistory      FirHistory_64
-#define FirFilter       FirFilter_64
-#define DownsamplerNx   DownsamplerNx_64
-#define ResamplerNxMx   ResamplerNxMx_64
+#define FirHistory FirHistory_64
+#define FirFilter FirFilter_64
+#define DownsamplerNx DownsamplerNx_64
+#define ResamplerNxMx ResamplerNxMx_64
 
 #include "upsampler.cpp"
 
@@ -76,17 +57,14 @@
 
 #undef FIR_DOUBLE_PRECISION
 
-/*
- * Dither
- */
-
+// Dither
 Dither::Dither(unsigned int n_bits)
 {
     static int last_holdrand = 0;
 
     unsigned int max_value;
 
-    _ASSERT(n_bits <= 31);
+    assert(n_bits <= 31);
 
     max_value = 2 << n_bits;
     m_rand_max = 1.0 / (double)max_value;
@@ -94,20 +72,15 @@ Dither::Dither(unsigned int n_bits)
     m_holdrand = last_holdrand++;
 }
 
-Dither&
-Dither::operator=(const Dither &obj)
+Dither& Dither::operator=(const Dither &obj)
 {
     m_rand_max = obj.m_rand_max;
 
     return *this;
 }
 
-/*
- * filter generation
- */
-
-void
-generateFilter(double *impulse, int taps, double sinc_freq)
+// filter generation
+void generateFilter(double *impulse, int taps, double sinc_freq)
 {
     int i, int_sinc_freq;
     double x1, y1, x2, y2, y, sum_y, taps_per_pi, center_tap;
@@ -128,25 +101,20 @@ generateFilter(double *impulse, int taps, double sinc_freq)
         x1 = ((double)i - center_tap) / taps_per_pi * M_PI;
         y1 = (x1 == 0.0) ? 1.0 : (sin(x1) / x1);
 
-        if (int_sinc_freq != 0 && ((taps - 1) % 2) == 0 &&
-            (int_sinc_freq % 2) == 0 && ((i - ((taps - 1) / 2)) % (int_sinc_freq / 2)) == 0) {
+        if (int_sinc_freq != 0 && ((taps - 1) % 2) == 0 && (int_sinc_freq % 2) == 0 && ((i - ((taps - 1) / 2)) % (int_sinc_freq / 2)) == 0)
+        {
             // insert true zero here!
             y1 = 0.0;
             //y1 = ((double)i == center_tap) ? 1.0 : 0.0;
         }
+
         if ((double)i == center_tap)
             y1 = 1.0;
 
         // windowing (BH7)
         x2 = (double)i / (double)(taps - 1);   // from [0.0 to 1.0]
-
-        y2 = 0.2712203606 - 0.4334446123 * cos(2.0 * M_PI * x2) +
-            0.21800412 * cos(4.0 * M_PI * x2) - 0.0657853433 * cos(6.0 * M_PI * x2) +
-            0.0107618673 * cos(8.0 * M_PI * x2) - 0.0007700127 * cos(10.0 * M_PI * x2) +
-            0.00001368088 * cos(12.0 * M_PI * x2);
-
+        y2 = 0.2712203606 - 0.4334446123 * cos(2.0 * M_PI * x2) + 0.21800412 * cos(4.0 * M_PI * x2) - 0.0657853433 * cos(6.0 * M_PI * x2) + 0.0107618673 * cos(8.0 * M_PI * x2) - 0.0007700127 * cos(10.0 * M_PI * x2) + 0.00001368088 * cos(12.0 * M_PI * x2);
         y = y1 * y2;
-
         impulse[i] = y;
         sum_y += y;
     }

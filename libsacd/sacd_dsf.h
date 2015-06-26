@@ -81,7 +81,6 @@ public:
     int open(sacd_media_t* p_file, uint32_t mode = 0);
     bool close();
     void set_area(area_id_e area_id);
-    void set_emaster(bool emaster);
     string set_track(uint32_t track_number, area_id_e area_id = AREA_BOTH, uint32_t offset = 0);
     bool read_frame(uint8_t* frame_data, int* frame_size, frame_type_e* frame_type);
     bool seek(double seconds);

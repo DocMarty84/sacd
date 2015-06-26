@@ -34,7 +34,7 @@
 #include "libsacd/sacd_dsdiff.h"
 #include "libsacd/sacd_dsf.h"
 #include "libsacd/version.h"
-#include "libdsd2pcm/dsdpcm_converter.h"
+#include "libdsd2pcm/dsdpcm_converter_hq.h"
 #include "libdstdec/dst_decoder.h"
 
 typedef struct
@@ -42,6 +42,7 @@ typedef struct
     const char * strIn;
     const char * strOut;
     bool bProgressLine;
+    int nSampleRate;
 
 } tThreadArgs;
 
@@ -69,8 +70,8 @@ void packageInt(unsigned char * buf, int offset, int num, int bytes)
 string toLower(const string& s)
 {
     string result;
-
     locale loc;
+
     for (unsigned int i = 0; i < s.length(); ++i)
     {
         result += tolower(s.at(i), loc);
@@ -81,52 +82,56 @@ string toLower(const string& s)
 
 class input_sacd_t
 {
-    media_type_t media_type;
-    sacd_media_t* sacd_media;
-    sacd_reader_t* sacd_reader;
-    area_id_e area_id;
-    vector<uint8_t> dsd_buf;
-    int dsd_buf_size;
-    vector<uint8_t> dst_buf;
-    int dst_buf_size;
-    vector<float> pcm_buf;
-    DstDec dst_decoder;
-    dsdpcm_converter_t dsdpcm_convert;
-    int dsd_samplerate;
-    int framerate;
+    media_type_t m_tMediaType;
+    sacd_media_t* m_pSacdMedia;
+    sacd_reader_t* m_pSacdReader;
+    vector<uint8_t> m_arrDsdBuf;
+    int m_nDsdBufSize;
+    vector<uint8_t> m_arrDstBuf;
+    int m_nDstBufSize;
+    vector<float> m_arrPcmBuf;
+    DstDec m_pDstDecoder;
+    dsdpcm_converter_hq* m_pDsdPcmConverter;
+    int m_nDsdSamplerate;
+    int m_nFramerate;
     bool m_bDstDecInit;
 
 public:
 
-    bool track_completed;
-    int pcm_out_channels;
-    unsigned int pcm_out_channel_map;
+    bool m_bTrackCompleted;
+    int m_nPcmOutChannels;
+    unsigned int m_nPcmOutChannelMap;
     float m_fProgress;
 
     input_sacd_t()
     {
-        sacd_media = NULL;
-        sacd_reader = NULL;
-        sacd_reader = NULL;
+        m_pSacdMedia = NULL;
+        m_pSacdReader = NULL;
+        m_pDsdPcmConverter = NULL;
         m_bDstDecInit = false;
         m_fProgress = 0;
     }
 
-    virtual ~input_sacd_t()
+    ~input_sacd_t()
     {
-        if (sacd_reader)
+        if (m_pSacdReader)
         {
-            delete sacd_reader;
+            delete m_pSacdReader;
         }
 
-        if (sacd_media)
+        if (m_pSacdMedia)
         {
-            delete sacd_media;
+            delete m_pSacdMedia;
         }
 
         if (m_bDstDecInit)
         {
-            Close(&dst_decoder);
+            Close(&m_pDstDecoder);
+        }
+
+        if (m_pDsdPcmConverter)
+        {
+            delete m_pDsdPcmConverter;
         }
     }
 
@@ -135,60 +140,60 @@ public:
         int nTracks = 0;
 
         string ext = toLower(p_path.substr(p_path.length()-3, 3));
-        media_type = UNK_TYPE;
+        m_tMediaType = UNK_TYPE;
 
         if (ext == "iso")
         {
-            media_type = ISO_TYPE;
+            m_tMediaType = ISO_TYPE;
         }
         else if (ext == "dat")
         {
-            media_type = ISO_TYPE;
+            m_tMediaType = ISO_TYPE;
         }
         else if (ext == "dff")
         {
-            media_type = DSDIFF_TYPE;
+            m_tMediaType = DSDIFF_TYPE;
         }
         else if (ext == "dsf")
         {
-            media_type = DSF_TYPE;
+            m_tMediaType = DSF_TYPE;
         }
 
-        if (media_type == UNK_TYPE)
+        if (m_tMediaType == UNK_TYPE)
         {
             printf("PANIC: exception_io_unsupported_format\n");
             return 0;
         }
 
-        sacd_media = new sacd_media_file_t();
+        m_pSacdMedia = new sacd_media_file_t();
 
-        if (!sacd_media)
+        if (!m_pSacdMedia)
         {
             printf("PANIC: exception_overflow\n");
             return 0;
         }
 
-        switch (media_type)
+        switch (m_tMediaType)
         {
             case ISO_TYPE:
-                sacd_reader = new sacd_disc_t;
-                if (!sacd_reader)
+                m_pSacdReader = new sacd_disc_t;
+                if (!m_pSacdReader)
                 {
                     printf("PANIC: exception_overflow\n");
                     return 0;
                 }
                 break;
             case DSDIFF_TYPE:
-                sacd_reader = new sacd_dsdiff_t;
-                if (!sacd_reader)
+                m_pSacdReader = new sacd_dsdiff_t;
+                if (!m_pSacdReader)
                 {
                     printf("PANIC: exception_overflow\n");
                     return 0;
                 }
                 break;
             case DSF_TYPE:
-                sacd_reader = new sacd_dsf_t;
-                if (!sacd_reader)
+                m_pSacdReader = new sacd_dsf_t;
+                if (!m_pSacdReader)
                 {
                     printf("PANIC: exception_overflow\n");
                     return 0;
@@ -200,13 +205,13 @@ public:
                 break;
         }
 
-        if (!sacd_media->open(p_path.c_str()))
+        if (!m_pSacdMedia->open(p_path.c_str()))
         {
             printf("PANIC: exception_io_data\n");
             return 0;
         }
 
-        if ((nTracks = sacd_reader->open(sacd_media, 0)) == 0)
+        if ((nTracks = m_pSacdReader->open(m_pSacdMedia, 0)) == 0)
         {
             printf("PANIC: Failed to parse SACD media\n");
             return 0;
@@ -215,54 +220,53 @@ public:
         return nTracks;
     }
 
-    string decode_initialize(uint32_t nSubsong)
+    string decode_initialize(uint32_t nSubsong, int nSampleRate)
     {
-        sacd_reader->set_emaster(0);
         string strFileName = "";
 
-        if (sacd_reader->get_track_count(AREA_MULCH) != 0)
+        if (m_pSacdReader->get_track_count(AREA_MULCH) != 0)
         {
-            strFileName = sacd_reader->set_track(nSubsong, AREA_MULCH, 0);
+            strFileName = m_pSacdReader->set_track(nSubsong, AREA_MULCH, 0);
         }
         else
         {
-            strFileName = sacd_reader->set_track(nSubsong, AREA_TWOCH, 0);
+            strFileName = m_pSacdReader->set_track(nSubsong, AREA_TWOCH, 0);
         }
 
-        dsd_samplerate = sacd_reader->get_samplerate();
-        framerate = sacd_reader->get_framerate();
-        pcm_out_channels = sacd_reader->get_channels();
+        m_nDsdSamplerate = m_pSacdReader->get_samplerate();
+        m_nFramerate = m_pSacdReader->get_framerate();
+        m_nPcmOutChannels = m_pSacdReader->get_channels();
 
-        switch (pcm_out_channels)
+        switch (m_nPcmOutChannels)
         {
             case 2:
-                pcm_out_channel_map = 1<<0 | 1<<1;
+                m_nPcmOutChannelMap = 1<<0 | 1<<1;
                 break;
             case 5:
-                pcm_out_channel_map = 1<<0 | 1<<1 | 1<<2 | 1<<4 | 1<<5;
+                m_nPcmOutChannelMap = 1<<0 | 1<<1 | 1<<2 | 1<<4 | 1<<5;
                 break;
             case 6:
-                pcm_out_channel_map = 1<<0 | 1<<1 | 1<<2 | 1<<3 | 1<<4 | 1<<5;
+                m_nPcmOutChannelMap = 1<<0 | 1<<1 | 1<<2 | 1<<3 | 1<<4 | 1<<5;
                 break;
             default:
-                pcm_out_channel_map = 0;
+                m_nPcmOutChannelMap = 0;
                 break;
         }
 
-        dst_buf_size = dsd_buf_size = dsd_samplerate / 8 / framerate * pcm_out_channels;
-        dsd_buf.resize(dsd_buf_size);
-        dst_buf.resize(dst_buf_size);
-        pcm_buf.resize(pcm_out_channels * 96000 / 75);
-        dsdpcm_convert.init(pcm_out_channels, dsd_samplerate, 96000);
-        dsdpcm_convert.set_gain(0);
-        track_completed = false;
+        m_pDsdPcmConverter = new dsdpcm_converter_hq();
+        m_nDstBufSize = m_nDsdBufSize = m_nDsdSamplerate / 8 / m_nFramerate * m_nPcmOutChannels;
+        m_arrDsdBuf.resize(m_nDsdBufSize);
+        m_arrDstBuf.resize(m_nDstBufSize);
+        m_arrPcmBuf.resize(m_nPcmOutChannels * nSampleRate / 75);
+        m_pDsdPcmConverter->init(m_nPcmOutChannels, m_nDsdSamplerate, nSampleRate);
+        m_bTrackCompleted = false;
 
         return strFileName;
     }
 
     int decode(FILE * pFile)
     {
-        if (track_completed)
+        if (m_bTrackCompleted)
         {
             return false;
         }
@@ -274,24 +278,24 @@ public:
 
         while (1)
         {
-            dst_size = dst_buf_size;
+            dst_size = m_nDstBufSize;
             frame_type_e frame_type;
 
-            if (sacd_reader->read_frame(dst_buf.data(), &dst_size, &frame_type))
+            if (m_pSacdReader->read_frame(m_arrDstBuf.data(), &dst_size, &frame_type))
             {
                 if (dst_size > 0)
                 {
                     if (frame_type == FRAME_INVALID)
                     {
-                        dst_size = dst_buf_size;
-                        memset(dst_buf.data(), 0xAA, dst_size);
+                        dst_size = m_nDstBufSize;
+                        memset(m_arrDstBuf.data(), 0xAA, dst_size);
                     }
 
                     if (frame_type == FRAME_DST)
                     {
                         if (!m_bDstDecInit)
                         {
-                            if (Init(&dst_decoder, pcm_out_channels, dst_buf_size) != 0)
+                            if (Init(&m_pDstDecoder, m_nPcmOutChannels, m_nDstBufSize) != 0)
                             {
                                 return false;
                             }
@@ -299,30 +303,30 @@ public:
                             m_bDstDecInit = true;
                         }
 
-                        Decode(&dst_decoder, dst_buf.data(), dsd_buf.data(), nFrame, &dst_size);
-                        dsd_size = dst_buf_size;
+                        Decode(&m_pDstDecoder, m_arrDstBuf.data(), m_arrDsdBuf.data(), nFrame, &dst_size);
+                        dsd_size = m_nDstBufSize;
 
                         nFrame++;
                     }
                     else
                     {
-                        dsd_buf = dst_buf;
+                        m_arrDsdBuf = m_arrDstBuf;
                         dsd_size = dst_size;
                     }
 
                     if (dsd_size > 0)
                     {
-                        if (!dsdpcm_convert.is_convert_called())
+                        if (!m_pDsdPcmConverter->is_convert_called())
                         {
-                            pcm_samples = dsdpcm_convert.convert(dsd_buf.data(), pcm_buf.data(), dsd_size);
-                            dsdpcm_convert.degibbs(pcm_buf.data(), pcm_samples, 0);
+                            pcm_samples = m_pDsdPcmConverter->convert(m_arrDsdBuf.data(), m_arrPcmBuf.data(), dsd_size);
+                            m_pDsdPcmConverter->degibbs(m_arrPcmBuf.data(), pcm_samples, 0);
                         }
                         else
                         {
-                            dsdpcm_convert.convert(dsd_buf.data(), pcm_buf.data(), dsd_size);
+                            m_pDsdPcmConverter->convert(m_arrDsdBuf.data(), m_arrPcmBuf.data(), dsd_size);
                         }
 
-                        writeData(pFile, pcm_buf);
+                        writeData(pFile, m_arrPcmBuf);
 
                         return true;
                     }
@@ -334,28 +338,28 @@ public:
             }
         }
 
-        dsd_buf.clear();
-        dst_buf.clear();
+        m_arrDsdBuf.clear();
+        m_arrDstBuf.clear();
         dst_size = 0;
 
         if (m_bDstDecInit)
         {
-            Decode(&dst_decoder, dst_buf.data(), dsd_buf.data(), nFrame, &dst_size);
+            Decode(&m_pDstDecoder, m_arrDstBuf.data(), m_arrDsdBuf.data(), nFrame, &dst_size);
         }
 
         if (dsd_size > 0)
         {
-            dsdpcm_convert.convert(dsd_buf.data(), pcm_buf.data(), dsd_size);
-            writeData(pFile, pcm_buf);
+            m_pDsdPcmConverter->convert(m_arrDsdBuf.data(), m_arrPcmBuf.data(), dsd_size);
+            writeData(pFile, m_arrPcmBuf);
             return true;
         }
 
-        dsd_size = dsd_buf_size;
-        memset(dsd_buf.data(), 0xAA, dsd_size);
-        pcm_samples = dsdpcm_convert.convert(dsd_buf.data(), pcm_buf.data(), dsd_size);
-        dsdpcm_convert.degibbs(pcm_buf.data(), pcm_samples, 1);
-        writeData(pFile, pcm_buf);
-        track_completed = true;
+        dsd_size = m_nDsdBufSize;
+        memset(m_arrDsdBuf.data(), 0xAA, dsd_size);
+        pcm_samples = m_pDsdPcmConverter->convert(m_arrDsdBuf.data(), m_arrPcmBuf.data(), dsd_size);
+        m_pDsdPcmConverter->degibbs(m_arrPcmBuf.data(), pcm_samples, 1);
+        writeData(pFile, m_arrPcmBuf);
+        m_bTrackCompleted = true;
 
         return false;
     }
@@ -378,7 +382,7 @@ public:
         fwrite(pDst, sizeof(unsigned char), nDst, pFile);
         delete[] pDst;
 
-        m_fProgress = sacd_reader->getProgress();
+        m_fProgress = m_pSacdReader->getProgress();
     }
 };
 
@@ -387,7 +391,7 @@ void * fnThread (void* threadargs)
     tTrackArgs * ta = (tTrackArgs *)threadargs;
     input_sacd_t * pSacd = new input_sacd_t();
     int nTracks = pSacd->open(ta->tArgs.strIn);
-    string strOutFile = ta->tArgs.strOut + pSacd->decode_initialize(ta->nTrack);
+    string strOutFile = ta->tArgs.strOut + pSacd->decode_initialize(ta->nTrack, ta->tArgs.nSampleRate);
 
     bool rd = true;
     unsigned int nSize = 0x7fffffff;
@@ -401,21 +405,21 @@ void * fnThread (void* threadargs)
     memcpy (arrHeader + 12, "fmt ", 4);
     packageInt (arrHeader, 16, 40, 4);
     memcpy (arrHeader + 20, arrFormat, 2);
-    packageInt (arrHeader, 22, pSacd->pcm_out_channels, 2);
-    packageInt (arrHeader, 24, 96000, 4);
-    packageInt (arrHeader, 28, pSacd->pcm_out_channels * 288000, 4);
-    packageInt (arrHeader, 32, pSacd->pcm_out_channels * 3, 2);
+    packageInt (arrHeader, 22, pSacd->m_nPcmOutChannels, 2);
+    packageInt (arrHeader, 24, ta->tArgs.nSampleRate, 4);
+    packageInt (arrHeader, 28, (ta->tArgs.nSampleRate * 24 * pSacd->m_nPcmOutChannels) / 8, 4);
+    packageInt (arrHeader, 32, pSacd->m_nPcmOutChannels * 3, 2);
     packageInt (arrHeader, 34, 24, 2);
     packageInt (arrHeader, 36, 22, 2);
     packageInt (arrHeader, 38, 24, 2);
-    packageInt (arrHeader, 40, pSacd->pcm_out_channel_map, 4);
+    packageInt (arrHeader, 40, pSacd->m_nPcmOutChannelMap, 4);
     memcpy (arrHeader + 44, arrSubtype, 16);
     memcpy (arrHeader + 60, "data", 4);
     packageInt (arrHeader, 64, nSize - 68, 4);
     FILE * pFile = fopen(strOutFile.data(), "wb");
     fwrite(arrHeader, 1, 68, pFile);
 
-    while (pSacd->track_completed == false || rd == true)
+    while (pSacd->m_bTrackCompleted == false || rd == true)
     {
         rd = pSacd->decode(pFile);
         ta->fProgress = pSacd->m_fProgress;
@@ -477,6 +481,7 @@ int main(int argc, char* argv[])
 {
     string strIn = "";
     string strOut = "";
+    int nSampleRate = 96000;
     char strPath[PATH_MAX];
     int nOpt;
     bool bProgressLine = false;
@@ -489,6 +494,9 @@ int main(int argc, char* argv[])
     "  -o, --outdir         : The folder to write the WAVE files to. If you omit\n"
     "                         this, the files will be placed in the input file's\n"
     "                         directory\n"
+    "  -r, --rate           : The output samplerate.\n"
+    "                         Valid rates are: 88200, 96000, 176400 and 192000.\n"
+    "                         If you omit this, 96KHz will be used.\n"
     "  -p, --progress       : Display progress to new lines. Use this if you intend\n"
     "                         to parse the output through a script. This option only\n"
     "                         lists either one progress percentage per line, or one\n"
@@ -499,12 +507,13 @@ int main(int argc, char* argv[])
     {
         {"infile", required_argument, NULL, 'i' },
         {"outdir", required_argument, NULL, 'o' },
+        {"rate", required_argument, NULL, 'r' },
         {"progress", no_argument, NULL, 'p'},
         {"help", no_argument, NULL, 'h' },
         { NULL, 0, NULL, 0 }
     };
 
-    while ((nOpt = getopt_long(argc, argv, "i:o:ph", tOptionsTable, NULL)) >= 0)
+    while ((nOpt = getopt_long(argc, argv, "i:o:r:ph", tOptionsTable, NULL)) >= 0)
     {
         switch (nOpt)
         {
@@ -514,6 +523,21 @@ int main(int argc, char* argv[])
             case 'o':
                 strOut = optarg;
                 break;
+            case 'r':
+            {
+                string s = optarg;
+
+                if (s == "88200" || s == "96000" || s == "176400" || s == "192000")
+                {
+                    nSampleRate = stoi(optarg);
+                }
+                else
+                {
+                    printf("PANIC: Invalid samplerate\n");
+                    return 0;
+                }
+                break;
+            }
             case 'p':
                 bProgressLine = true;
                 break;
@@ -569,6 +593,7 @@ int main(int argc, char* argv[])
     tThreadArgs tArgs;
     tArgs.strIn = strIn.c_str();
     tArgs.strOut = strOut.c_str();
+    tArgs.nSampleRate = nSampleRate;
     tArgs.bProgressLine = bProgressLine;
     vector<tTrackArgs> arrTracks(nTracks);
     pthread_t hProgressThread;

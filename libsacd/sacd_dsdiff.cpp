@@ -342,10 +342,8 @@ bool sacd_dsdiff_t::close()
     return true;
 }
 
-void sacd_dsdiff_t::set_area(area_id_e area_id) {
-}
-
-void sacd_dsdiff_t::set_emaster(bool emaster) {
+void sacd_dsdiff_t::set_area(area_id_e area_id)
+{
 }
 
 string sacd_dsdiff_t::set_track(uint32_t track_number, area_id_e area_id, uint32_t offset) {

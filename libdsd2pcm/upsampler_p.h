@@ -20,17 +20,14 @@
 #ifndef _upsampler_p_h_
 #define _upsampler_p_h_
 
-/*
- * prepare 32-bit versions
- */
-
-#define FIR_DOUBLE_PRECISION    0
+//prepare 32-bit versions
+#define FIR_DOUBLE_PRECISION 0
 
 // can't use templates due to memory align and SSE use
-#define FirHistory      FirHistory_32
-#define FirFilter       FirFilter_32
-#define DownsamplerNx   DownsamplerNx_32
-#define ResamplerNxMx   ResamplerNxMx_32
+#define FirHistory FirHistory_32
+#define FirFilter FirFilter_32
+#define DownsamplerNx DownsamplerNx_32
+#define ResamplerNxMx ResamplerNxMx_32
 
 #include "upsampler.h"
 
@@ -41,17 +38,14 @@
 
 #undef FIR_DOUBLE_PRECISION
 
-/*
- * prepare 64-bit versions
- */
-
-#define FIR_DOUBLE_PRECISION    1
+//prepare 64-bit versions
+#define FIR_DOUBLE_PRECISION 1
 
 // can't use templates due to memory align and SSE use
-#define FirHistory      FirHistory_64
-#define FirFilter       FirFilter_64
-#define DownsamplerNx   DownsamplerNx_64
-#define ResamplerNxMx   ResamplerNxMx_64
+#define FirHistory FirHistory_64
+#define FirFilter FirFilter_64
+#define DownsamplerNx DownsamplerNx_64
+#define ResamplerNxMx ResamplerNxMx_64
 
 #include "upsampler.h"
 
@@ -62,13 +56,10 @@
 
 #undef FIR_DOUBLE_PRECISION
 
-/*
- * common part
- */
-
+//common part
 #include "dither.h"
 
 // generate windowed sinc impulse response for low-pass filter
-void    generateFilter(double *impulse, int taps, double sinc_freq);
+void generateFilter(double *impulse, int taps, double sinc_freq);
 
 #endif
