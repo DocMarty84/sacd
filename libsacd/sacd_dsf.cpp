@@ -206,7 +206,7 @@ bool sacd_dsf_t::read_frame(uint8_t* frame_data, int* frame_size, frame_type_e* 
     {
         if (m_block_offset * m_channel_count >= m_block_data_end)
         {
-            m_block_data_end = (int)min(m_data_end_offset - m_file->get_position(), m_block_data.size());
+            m_block_data_end = (int)MIN(m_data_end_offset - m_file->get_position(), m_block_data.size());
 
             if (m_block_data_end > 0)
             {
