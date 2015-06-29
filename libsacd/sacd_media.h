@@ -28,7 +28,8 @@
 
 using namespace std;
 
-class sacd_media_t {
+class sacd_media_t
+{
 public:
     sacd_media_t() {}
     virtual ~sacd_media_t() {}
@@ -36,11 +37,8 @@ public:
     virtual bool close() = 0;
     virtual bool seek(int64_t position, int mode = SEEK_SET) = 0;
     virtual int64_t get_position() = 0;
-    virtual int64_t get_size() = 0;
     virtual size_t read(void* data, size_t size) = 0;
-    virtual size_t write(const void* data, size_t size) = 0;
     virtual int64_t skip(int64_t bytes) = 0;
-    virtual int truncate(int64_t position) = 0;
     virtual string getFileName() = 0;
 };
 
@@ -55,11 +53,8 @@ public:
     virtual bool close();
     virtual bool seek(int64_t position, int mode = SEEK_SET);
     virtual int64_t get_position();
-    virtual int64_t get_size();
     virtual size_t read(void* data, size_t size);
-    virtual size_t write(const void* data, size_t size);
     virtual int64_t skip(int64_t bytes);
-    virtual int truncate(int64_t position);
     virtual string getFileName();
 };
 

@@ -42,17 +42,10 @@ public:
     virtual bool close() = 0;
     virtual uint32_t get_track_count(area_id_e area_id = AREA_BOTH) = 0;
     virtual int get_channels() = 0;
-    virtual int get_loudspeaker_config() = 0;
     virtual int get_samplerate() = 0;
     virtual int get_framerate() = 0;
-    virtual uint64_t get_size() = 0;
-    virtual uint64_t get_offset() = 0;
     virtual float getProgress() = 0;
-    virtual double get_duration() = 0;
-    virtual double get_duration(uint32_t subsong) = 0;
-    virtual bool commit() = 0;
     virtual bool is_dst() = 0;
-    virtual void set_area(area_id_e area_id) = 0;
     virtual string set_track(uint32_t track_number, area_id_e area_id = AREA_BOTH, uint32_t offset = 0) = 0;
     virtual bool read_frame(uint8_t* frame_data, int* frame_size, frame_type_e* frame_type) = 0;
 };

@@ -64,31 +64,14 @@ int64_t sacd_media_file_t::get_position()
     return ftell(media_file);
 }
 
-int64_t sacd_media_file_t::get_size()
-{
-    struct stat stat_buf;
-    fstat(fileno(media_file), &stat_buf);
-    return stat_buf.st_size;
-}
-
 size_t sacd_media_file_t::read(void* data, size_t size)
 {
     return fread(data, 1, size, media_file);
 }
 
-size_t sacd_media_file_t::write(const void* data, size_t size)
-{
-    return fwrite(data, 1, size, media_file);
-}
-
 int64_t sacd_media_file_t::skip(int64_t bytes)
 {
     return fseek(media_file, bytes, SEEK_CUR);
-}
-
-int sacd_media_file_t::truncate(int64_t position)
-{
-    return ftruncate(fileno(media_file), position);
 }
 
 string sacd_media_file_t::getFileName()

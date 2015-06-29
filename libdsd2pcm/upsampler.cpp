@@ -1,220 +1,28 @@
 /*
-* Downsampler/Resampler with single/double precision
-* Copyright (c) 2012 Vladislav Goncharov <vl-g@yandex.ru>
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU Lesser General Public
-* License as published by the Free Software Foundation; either
-* version 2.1 of the License, or (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-* Lesser General Public License for more details.
-*
-* You should have received a copy of the GNU Lesser General Public
-* License along with FFmpeg; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+    Copyright 2015 Robert Tari <robert.tari@gmail.com>
+    Copyright 2012 Vladislav Goncharov <vl-g@yandex.ru>
+
+    This file is part of SACD.
+
+    SACD is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    SACD is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
-// this is the stub file included twice from upsampler_p.cpp
+#include <xmmintrin.h>  // SSE2 inlines
+#include <math.h>
 #include <string.h>
-#include <emmintrin.h>
 #include <assert.h>
 #include "upsampler.h"
-
-#if !FIR_DOUBLE_PRECISION
-
-// FirHistory
-FirHistory::FirHistory(unsigned int fir_size)
-{
-    m_fir_size = fir_size;
-
-    if (m_fir_size > 0)
-    {
-
-        // init history buffer
-        m_x = new float[m_fir_size * 2 + 20]; // leave space for FIR pad (16 SSE block align + 4 memory align)
-        m_head = m_fir_size;
-
-        memset(m_x, 0, (m_fir_size * 2 + 20) * sizeof(float));
-
-    }
-    else
-    {
-        m_x = NULL;
-        m_head = 0;
-    }
-}
-
-FirHistory::~FirHistory()
-{
-    delete[] m_x;
-}
-
-FirHistory& FirHistory::operator=(const FirHistory &obj)
-{
-    delete[] m_x;
-
-    m_fir_size = obj.m_fir_size;
-
-    if (m_fir_size > 0)
-    {
-        // init history buffer
-        m_x = new float[m_fir_size * 2 + 20]; // leave space for FIR pad (16 SSE block align + 4 memory align)
-        m_head = m_fir_size;
-
-        memset(m_x, 0, (m_fir_size * 2 + 20) * sizeof(float));
-
-    }
-    else
-    {
-        m_x = NULL;
-        m_head = 0;
-    }
-
-    return *this;
-}
-
-void FirHistory::pushSample(double x)
-{
-    // push to head
-    if (m_head == 0)
-    {
-        // shift
-        memcpy(m_x + m_fir_size, m_x, m_fir_size * sizeof(float));
-
-        m_head = m_fir_size;
-    }
-
-    m_x[--m_head] = (float)x;
-}
-
-void FirHistory::reset(bool reset_to_1)
-{
-    unsigned int i;
-
-    m_head = m_fir_size;
-
-    if (!reset_to_1)
-    {
-        memset(m_x, 0, m_fir_size * 2 * sizeof(float));
-
-    }
-    else
-    {
-        for (i = 0; i < m_fir_size * 2; i++)
-            m_x[i] = 1.0;
-    }
-}
-
-// FirFilter
-FirFilter::FirFilter(const double *fir, unsigned int fir_size, bool no_history) : m_x(!no_history ? fir_size : 0)
-{
-    unsigned int i;
-
-    m_org_fir_size = fir_size;
-
-    if ((fir_size % 16) != 0)
-        m_fir_size = (fir_size / 16 + 1) * 16; // align size!
-    else
-        m_fir_size = m_org_fir_size; // already aligned
-
-    m_fir_alloc = new float[m_fir_size + 4]; // reserve some space for pointer align
-
-    // align pointer!
-    m_fir = (((size_t)m_fir_alloc & 0x0f) == 0) ? m_fir_alloc : (float *)(((size_t)m_fir_alloc & ~0x0f) + 0x10);
-
-    for (i = 0; i < m_fir_size; i++)
-        m_fir[i] = (i < fir_size) ? (float)fir[i] : 0;
-}
-
-FirFilter::FirFilter() : m_x(0)
-{
-    m_fir = NULL;
-    m_fir_alloc = NULL;
-    m_fir_size = 0;
-}
-
-FirFilter::~FirFilter()
-{
-    delete[] m_fir_alloc;
-}
-
-FirFilter& FirFilter::operator=(const FirFilter &obj)
-{
-    delete[] m_fir_alloc;
-
-    m_fir_size = obj.m_fir_size;
-    m_org_fir_size = obj.m_org_fir_size;
-    m_fir_alloc = new float[m_fir_size + 4]; // reserve some space for pointer align
-
-    // align pointer!
-    m_fir = (((size_t)m_fir_alloc & 0x0f) == 0) ? m_fir_alloc : (float *)(((size_t)m_fir_alloc & ~0x0f) + 0x10);
-
-    memcpy(m_fir, obj.m_fir, m_fir_size * sizeof(float));
-
-    m_x = obj.m_x;
-
-    return *this;
-}
-
-double FirFilter::processSample(double x)
-{
-    double y;
-
-    m_x.pushSample(x);
-
-    y = fast_convolve(m_x.getBuffer());
-
-    return y;
-}
-
-void FirFilter::pushSample(double x)
-{
-    m_x.pushSample(x);
-}
-
-// fir must be aligned! fir_size must be %16!
-double FirFilter::fast_convolve(float *x)
-{
-    unsigned int i;
-    double y;
-
-    // convolution
-    __m128 xy1, xy2, xy3, xy4;
-
-    xy1 = _mm_setzero_ps();
-    xy2 = _mm_setzero_ps();
-    xy3 = _mm_setzero_ps();
-    xy4 = _mm_setzero_ps();
-
-    for (i = 0; i < m_fir_size; i += 16)
-    {
-        xy1 = _mm_add_ps(xy1, _mm_mul_ps(_mm_loadu_ps(x + i), _mm_load_ps(m_fir + i)));
-        xy2 = _mm_add_ps(xy2, _mm_mul_ps(_mm_loadu_ps(x + i + 4), _mm_load_ps(m_fir + i + 4)));
-        xy3 = _mm_add_ps(xy3, _mm_mul_ps(_mm_loadu_ps(x + i + 8), _mm_load_ps(m_fir + i + 8)));
-        xy4 = _mm_add_ps(xy4, _mm_mul_ps(_mm_loadu_ps(x + i + 12), _mm_load_ps(m_fir + i + 12)));
-    }
-
-    xy1 = _mm_add_ps(_mm_add_ps(xy1, xy2), _mm_add_ps(xy3, xy4));
-
-    float xy_flt[4];
-
-    _mm_storeu_ps(xy_flt, xy1);
-
-    // make a bit extended precision on the last step
-    y = (double)xy_flt[0] + (double)xy_flt[1] + (double)xy_flt[2] + (double)xy_flt[3];
-
-    return y;
-}
-
-void FirFilter::reset(bool reset_to_1)
-{
-    m_x.reset(reset_to_1);
-}
-
-#else // FIR_DOUBLE_PRECISION
 
 // FirHistory
 FirHistory::FirHistory(unsigned int fir_size)
@@ -406,8 +214,6 @@ void FirFilter::reset(bool reset_to_1)
     m_x.reset(reset_to_1);
 }
 
-#endif //FIR_DOUBLE_PRECISION
-
 // Nx downsampler
 DownsamplerNx::DownsamplerNx(unsigned int nX, const double *fir, unsigned int fir_len) : m_flt(fir, fir_len)
 {
@@ -517,4 +323,71 @@ void ResamplerNxMx::reset(bool reset_to_1)
     m_x.reset(reset_to_1);
 
     m_xN_counter = 0;
+}
+
+// Dither
+Dither::Dither(unsigned int n_bits)
+{
+    static int last_holdrand = 0;
+
+    unsigned int max_value;
+
+    assert(n_bits <= 31);
+
+    max_value = 2 << n_bits;
+    m_rand_max = 1.0 / (double)max_value;
+
+    m_holdrand = last_holdrand++;
+}
+
+Dither& Dither::operator=(const Dither &obj)
+{
+    m_rand_max = obj.m_rand_max;
+
+    return *this;
+}
+
+// filter generation
+void generateFilter(double *impulse, int taps, double sinc_freq)
+{
+    int i, int_sinc_freq;
+    double x1, y1, x2, y2, y, sum_y, taps_per_pi, center_tap;
+
+    taps_per_pi = sinc_freq / 2.0;
+    center_tap = (double)(taps - 1) / 2.0;
+
+    int_sinc_freq = (int)floor(sinc_freq);
+
+    if ((double)int_sinc_freq != sinc_freq)
+        int_sinc_freq = 0;
+
+    sum_y = 0;
+
+    for (i = 0; i < taps; i++) {
+
+        // sinc
+        x1 = ((double)i - center_tap) / taps_per_pi * M_PI;
+        y1 = (x1 == 0.0) ? 1.0 : (sin(x1) / x1);
+
+        if (int_sinc_freq != 0 && ((taps - 1) % 2) == 0 && (int_sinc_freq % 2) == 0 && ((i - ((taps - 1) / 2)) % (int_sinc_freq / 2)) == 0)
+        {
+            // insert true zero here!
+            y1 = 0.0;
+            //y1 = ((double)i == center_tap) ? 1.0 : 0.0;
+        }
+
+        if ((double)i == center_tap)
+            y1 = 1.0;
+
+        // windowing (BH7)
+        x2 = (double)i / (double)(taps - 1);   // from [0.0 to 1.0]
+        y2 = 0.2712203606 - 0.4334446123 * cos(2.0 * M_PI * x2) + 0.21800412 * cos(4.0 * M_PI * x2) - 0.0657853433 * cos(6.0 * M_PI * x2) + 0.0107618673 * cos(8.0 * M_PI * x2) - 0.0007700127 * cos(10.0 * M_PI * x2) + 0.00001368088 * cos(12.0 * M_PI * x2);
+        y = y1 * y2;
+        impulse[i] = y;
+        sum_y += y;
+    }
+
+    // scale
+    for (i = 0; i < taps; i++)
+        impulse[i] /= sum_y;
 }

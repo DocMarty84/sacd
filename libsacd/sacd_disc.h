@@ -27,65 +27,49 @@
 #include "sacd_reader.h"
 
 #define SACD_PSN_SIZE 2064
-#define MAX_DST_SIZE (1024 * 64)
 
 using namespace std;
 
-typedef struct {
-    uint8_t data[MAX_DST_SIZE];
-    int     size;
-    int     complete;
-    bool    started;
-    int     sector_count;
-    int     channel_count;
-    int     dst_encoded;
+typedef struct
+{
+    uint8_t data[1024 * 64];
+    int size;
+    bool started;
+    int channel_count;
+    int dst_encoded;
 } audio_frame_t;
 
-class sacd_disc_t : public sacd_reader_t {
+class sacd_disc_t : public sacd_reader_t
+{
 private:
-    sacd_media_t*        m_file;
+    sacd_media_t* m_file;
     scarletbook_handle_t m_sb;
-    area_id_e            m_track_area;
-    uint8_t              m_track_number;
-    uint32_t             m_track_start_lsn;
-    uint32_t             m_track_length_lsn;
-    uint32_t             m_track_current_lsn;
-    uint8_t              m_channel_count;
-    bool                 m_dst_encoded;
-    audio_sector_t       m_audio_sector;
-    audio_frame_t        m_frame;
-    int                  m_frame_info_counter;
-    int                  m_packet_info_idx;
-    uint8_t              m_sector_buffer[SACD_PSN_SIZE];
-    uint32_t             m_sector_size;
-    int                  m_sector_bad_reads;
-    uint8_t*             m_buffer;
-    int                  m_buffer_offset;
+    area_id_e m_track_area;
+    uint32_t m_track_start_lsn;
+    uint32_t m_track_length_lsn;
+    uint32_t m_track_current_lsn;
+    uint8_t m_channel_count;
+    audio_sector_t m_audio_sector;
+    audio_frame_t m_frame;
+    int m_packet_info_idx;
+    uint8_t m_sector_buffer[SACD_PSN_SIZE];
+    uint32_t m_sector_size;
+    int m_sector_bad_reads;
+    uint8_t* m_buffer;
+    int m_buffer_offset;
 public:
     static bool g_is_sacd(const char* p_path);
-    static bool g_is_sacd(const char p_drive);
     sacd_disc_t();
     ~sacd_disc_t();
-    scarletbook_handle_t* get_handle();
     scarletbook_area_t* get_area(area_id_e area_id);
     uint32_t get_track_count(area_id_e area_id = AREA_BOTH);
-    area_id_e get_track_area_id();
-    uint8_t get_track_number();
     int get_channels();
-    int get_loudspeaker_config();
     int get_samplerate();
     int get_framerate();
-    uint64_t get_size();
-    uint64_t get_offset();
     float getProgress();
-    double get_duration();
-    double get_duration(uint32_t subsong);
-    bool commit();
-    uint32_t get_track_length_lsn();
     bool is_dst();
     int open(sacd_media_t* p_file, uint32_t mode = 0);
     bool close();
-    void set_area(area_id_e area_id);
     string set_track(uint32_t track_number, area_id_e area_id = AREA_BOTH, uint32_t offset = 0);
     bool read_frame(uint8_t* frame_data, int* frame_size, frame_type_e* frame_type);
     bool read_blocks_raw(uint32_t lb_start, size_t block_count, uint8_t* data);

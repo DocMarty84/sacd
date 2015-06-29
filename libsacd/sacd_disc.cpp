@@ -25,50 +25,11 @@
 
 using namespace std;
 
-static inline int has_two_channel(scarletbook_handle_t* handle) {
-    return handle->twoch_area_idx != -1;
-}
-
-static inline int has_multi_channel(scarletbook_handle_t* handle) {
-    return handle->mulch_area_idx != -1;
-}
-
-static inline int has_both_channels(scarletbook_handle_t* handle) {
-    return handle->twoch_area_idx != -1 && handle->mulch_area_idx != -1;
-}
-
-static inline area_toc_t* get_two_channel(scarletbook_handle_t* handle) {
-    return handle->twoch_area_idx == -1 ? 0 : handle->area[handle->twoch_area_idx].area_toc;
-}
-
-static inline area_toc_t* get_multi_channel(scarletbook_handle_t* handle) {
-    return handle->mulch_area_idx == -1 ? 0 : handle->area[handle->mulch_area_idx].area_toc;
-}
-
-typedef struct {
-    uint32_t    id;
-    const char* name;
-} codepage_id_t;
-
-static codepage_id_t codepage_ids[] =
-{
-    {0, character_set[0]},
-    {20127,  character_set[1]},
-    {28591,  character_set[2]},
-    {932,    character_set[3]},
-    {949,    character_set[4]},
-    {936,    character_set[5]},
-    {950,    character_set[6]},
-    {28591,  character_set[7]},
-};
-
 static inline string charset_convert(char* str, size_t insize, uint8_t codepage_index)
 {
-    const char* strCodepage = "US-ASCII";
-
-    if (codepage_index < sizeof(codepage_ids) / sizeof(*codepage_ids))
+    if (codepage_index > 7)
     {
-        strCodepage = codepage_ids[codepage_index].name;
+        codepage_index = 0;
     }
 
     size_t buf_size = 2048;
@@ -76,7 +37,7 @@ static inline string charset_convert(char* str, size_t insize, uint8_t codepage_
     memset(buf, 0, buf_size);
     char * out_buf = buf;
 
-    iconv_t cd = iconv_open("UTF-8", strCodepage);
+    iconv_t cd = iconv_open("UTF-8", character_set[codepage_index]);
     iconv(cd, &str, &insize, &out_buf, &buf_size);
     iconv_close(cd);
 
@@ -135,23 +96,14 @@ bool sacd_disc_t::g_is_sacd(const char* p_path)
     return false;
 }
 
-bool sacd_disc_t::g_is_sacd(const char p_drive)
-{
-    return false;
-}
-
 sacd_disc_t::sacd_disc_t()
 {
     m_audio_sector.header.dst_encoded = 0;
-    m_dst_encoded = false;
     m_sector_bad_reads = 0;
 }
 
-sacd_disc_t::~sacd_disc_t() {
-}
-
-scarletbook_handle_t* sacd_disc_t::get_handle() {
-    return &m_sb;
+sacd_disc_t::~sacd_disc_t()
+{
 }
 
 scarletbook_area_t* sacd_disc_t::get_area(area_id_e area_id)
@@ -185,27 +137,13 @@ uint32_t sacd_disc_t::get_track_count(area_id_e area_id)
     return 0;
 }
 
-area_id_e sacd_disc_t::get_track_area_id() {
-    return m_track_area;
-}
-
-uint8_t sacd_disc_t::get_track_number() {
-    return m_track_number;
-}
-
-uint32_t sacd_disc_t::get_track_length_lsn() {
-    return m_track_length_lsn;
-}
-
-int sacd_disc_t::get_channels() {
+int sacd_disc_t::get_channels()
+{
     return get_area(m_track_area) ? get_area(m_track_area)->area_toc->channel_count : 0;
 }
 
-int sacd_disc_t::get_loudspeaker_config() {
-    return get_area(m_track_area) ? get_area(m_track_area)->area_toc->loudspeaker_config : 0;
-}
-
-int sacd_disc_t::get_samplerate() {
+int sacd_disc_t::get_samplerate()
+{
     return SACD_SAMPLING_FREQUENCY;
 }
 
@@ -214,41 +152,14 @@ int sacd_disc_t::get_framerate()
     return 75;
 }
 
-uint64_t sacd_disc_t::get_size() {
-    return (uint64_t)m_track_length_lsn * (uint64_t)m_sector_size;
-}
-
-uint64_t sacd_disc_t::get_offset() {
-    return (uint64_t)m_track_current_lsn * (uint64_t)m_sector_size;
-}
-
 float sacd_disc_t::getProgress()
 {
     return ((float)(m_track_current_lsn - m_track_start_lsn) * 100.0) / (float)m_track_length_lsn;
 }
 
-double sacd_disc_t::get_duration() {
-    if (get_area(m_track_area)) {
-        area_tracklist_time_duration_t duration = get_area(m_track_area)->area_tracklist_time->duration[m_track_number];
-        return duration.minutes * 60.0 + duration.seconds * 1.0 + duration.frames / 75.0;
-    }
-    return 0.0;
-}
-
-double sacd_disc_t::get_duration(uint32_t subsong) {
-    if (get_area(m_track_area)) {
-        area_tracklist_time_duration_t duration = get_area(m_track_area)->area_tracklist_time->duration[subsong];
-        return duration.minutes * 60.0 + duration.seconds * 1.0 + duration.frames / 75.0;
-    }
-    return 0.0;
-}
-
-bool sacd_disc_t::commit() {
-    return true;
-}
-
-bool sacd_disc_t::is_dst() {
-    return m_dst_encoded;
+bool sacd_disc_t::is_dst()
+{
+    return false;
 }
 
 int sacd_disc_t::open(sacd_media_t* p_file, uint32_t mode)
@@ -357,7 +268,7 @@ int sacd_disc_t::open(sacd_media_t* p_file, uint32_t mode)
 
 bool sacd_disc_t::close()
 {
-    if (has_two_channel(&m_sb))
+    if (m_sb.twoch_area_idx != -1)
     {
         free_area(&m_sb.area[m_sb.twoch_area_idx]);
         free(m_sb.area[m_sb.twoch_area_idx].area_data);
@@ -365,7 +276,7 @@ bool sacd_disc_t::close()
         m_sb.twoch_area_idx = -1;
     }
 
-    if (has_multi_channel(&m_sb))
+    if (m_sb.mulch_area_idx != -1)
     {
         free_area(&m_sb.area[m_sb.mulch_area_idx]);
         free(m_sb.area[m_sb.mulch_area_idx].area_data);
@@ -401,17 +312,11 @@ bool sacd_disc_t::close()
     return true;
 }
 
-void sacd_disc_t::set_area(area_id_e area_id) {
-    m_track_area = area_id;
-    m_dst_encoded = get_area(m_track_area) ? get_area(m_track_area)->area_toc->frame_format == FRAME_FORMAT_DST : false;
-}
-
 string sacd_disc_t::set_track(uint32_t track_number, area_id_e area_id, uint32_t offset)
 {
     if (track_number < get_track_count(area_id))
     {
         scarletbook_area_t* area = get_area(area_id);
-        m_track_number = track_number;
         m_track_area = area_id;
         m_track_start_lsn = area->area_tracklist_offset->track_start_lsn[track_number];
         m_track_length_lsn = area->area_tracklist_offset->track_length_lsn[track_number];
@@ -441,106 +346,142 @@ bool sacd_disc_t::read_frame(uint8_t* frame_data, int* frame_size, frame_type_e*
 
     while (m_track_current_lsn < m_track_start_lsn + m_track_length_lsn)
     {
-        if (m_sector_bad_reads > 0) {
+        if (m_sector_bad_reads > 0)
+        {
             m_buffer_offset = 0;
             m_packet_info_idx = 0;
             memset(&m_audio_sector, 0, sizeof(m_audio_sector));
             memset(&m_frame, 0, sizeof(m_frame));
             *frame_type = FRAME_INVALID;
+
             return true;
         }
-        if (m_packet_info_idx == m_audio_sector.header.packet_info_count) {
+
+        if (m_packet_info_idx == m_audio_sector.header.packet_info_count)
+        {
             // obtain the next sector data block
             m_buffer_offset = 0;
             m_packet_info_idx = 0;
             size_t read_bytes = m_file->read(m_sector_buffer, m_sector_size);
             m_track_current_lsn++;
-            if (read_bytes != m_sector_size) {
+
+            if (read_bytes != m_sector_size)
+            {
                 m_sector_bad_reads++;
                 continue;
             }
+
             memcpy(&m_audio_sector.header, m_buffer + m_buffer_offset, AUDIO_SECTOR_HEADER_SIZE);
             m_buffer_offset += AUDIO_SECTOR_HEADER_SIZE;
-            for (uint8_t i = 0; i < m_audio_sector.header.packet_info_count; i++) {
+
+            for (uint8_t i = 0; i < m_audio_sector.header.packet_info_count; i++)
+            {
                 m_audio_sector.packet[i].frame_start = ((m_buffer + m_buffer_offset)[0] >> 7) & 1;
                 m_audio_sector.packet[i].data_type = ((m_buffer + m_buffer_offset)[0] >> 3) & 7;
                 m_audio_sector.packet[i].packet_length = ((m_buffer + m_buffer_offset)[0] & 7) << 8 | (m_buffer + m_buffer_offset)[1];
                 m_buffer_offset += AUDIO_PACKET_INFO_SIZE;
             }
-            if (m_audio_sector.header.dst_encoded) {
+
+            if (m_audio_sector.header.dst_encoded)
+            {
                 memcpy(m_audio_sector.frame, m_buffer + m_buffer_offset, AUDIO_FRAME_INFO_SIZE * m_audio_sector.header.frame_info_count);
                 m_buffer_offset += AUDIO_FRAME_INFO_SIZE * m_audio_sector.header.frame_info_count;
             }
-            else {
-                for (uint8_t i = 0; i < m_audio_sector.header.frame_info_count; i++) {
+            else
+            {
+                for (uint8_t i = 0; i < m_audio_sector.header.frame_info_count; i++)
+                {
                     memcpy(&m_audio_sector.frame[i], m_buffer + m_buffer_offset, AUDIO_FRAME_INFO_SIZE - 1);
                     m_buffer_offset += AUDIO_FRAME_INFO_SIZE - 1;
                 }
             }
         }
-        while (m_packet_info_idx < m_audio_sector.header.packet_info_count && m_sector_bad_reads == 0) {
+
+        while (m_packet_info_idx < m_audio_sector.header.packet_info_count && m_sector_bad_reads == 0)
+        {
             audio_packet_info_t* packet = &m_audio_sector.packet[m_packet_info_idx];
-            switch (packet->data_type) {
-            case DATA_TYPE_AUDIO:
-                if (m_frame.started) {
-                    if (packet->frame_start) {
-                        if (m_frame.size <= *frame_size) {
-                            memcpy(frame_data, m_frame.data, m_frame.size);
-                            *frame_size = m_frame.size;
+
+            switch (packet->data_type)
+            {
+                case DATA_TYPE_AUDIO:
+                    if (m_frame.started)
+                    {
+                        if (packet->frame_start)
+                        {
+                            if (m_frame.size <= *frame_size)
+                            {
+                                memcpy(frame_data, m_frame.data, m_frame.size);
+                                *frame_size = m_frame.size;
+                            }
+                            else
+                            {
+                                m_sector_bad_reads++;
+                                continue;
+                            }
+
+                            *frame_type = m_sector_bad_reads > 0 ? FRAME_INVALID : m_frame.dst_encoded ? FRAME_DST : FRAME_DSD;
+                            m_frame.started = false;
+
+                            return true;
                         }
-                        else {
+                    }
+                    else
+                    {
+                        if (packet->frame_start)
+                        {
+                            m_frame.size = 0;
+                            m_frame.dst_encoded = m_audio_sector.header.dst_encoded;
+                            m_frame.started = true;
+                        }
+                    }
+
+                    if (m_frame.started)
+                    {
+                        if (m_frame.size + packet->packet_length <= *frame_size && m_buffer_offset + packet->packet_length <= SACD_LSN_SIZE)
+                        {
+                            memcpy(m_frame.data + m_frame.size, m_buffer + m_buffer_offset, packet->packet_length);
+                            m_frame.size += packet->packet_length;
+                        }
+                        else
+                        {
                             m_sector_bad_reads++;
                             continue;
                         }
-                        *frame_type = m_sector_bad_reads > 0 ? FRAME_INVALID : m_frame.dst_encoded ? FRAME_DST : FRAME_DSD;
-                        m_frame.started = false;
-                        return true;
                     }
-                }
-                else {
-                    if (packet->frame_start) {
-                        m_frame.size = 0;
-                        m_frame.dst_encoded = m_audio_sector.header.dst_encoded;
-                        m_frame.started = true;
-                    }
-                }
-                if (m_frame.started) {
-                    if (m_frame.size + packet->packet_length <= *frame_size && m_buffer_offset + packet->packet_length <= SACD_LSN_SIZE) {
-                        memcpy(m_frame.data + m_frame.size, m_buffer + m_buffer_offset, packet->packet_length);
-                        m_frame.size += packet->packet_length;
-                    }
-                    else {
-                        m_sector_bad_reads++;
-                        continue;
-                    }
-                }
-                break;
-            case DATA_TYPE_SUPPLEMENTARY:
-            case DATA_TYPE_PADDING:
-                break;
-            default:
-                break;
+                    break;
+                case DATA_TYPE_SUPPLEMENTARY:
+                case DATA_TYPE_PADDING:
+                    break;
+                default:
+                    break;
             }
+
             m_buffer_offset += packet->packet_length;
             m_packet_info_idx++;
         }
     }
-    if (m_frame.started) {
-        if (m_frame.size <= *frame_size) {
+
+    if (m_frame.started)
+    {
+        if (m_frame.size <= *frame_size)
+        {
             memcpy(frame_data, m_frame.data, m_frame.size);
             *frame_size = m_frame.size;
         }
-        else {
+        else
+        {
             m_sector_bad_reads++;
             m_buffer_offset = 0;
             m_packet_info_idx = 0;
             memset(&m_audio_sector, 0, sizeof(m_audio_sector));
             memset(&m_frame, 0, sizeof(m_frame));
         }
+
         m_frame.started = false;
         *frame_type = m_sector_bad_reads > 0 ? FRAME_INVALID : m_frame.dst_encoded ? FRAME_DST : FRAME_DSD;
         return true;
     }
+
     *frame_type = FRAME_INVALID;
     return false;
 }
@@ -550,7 +491,7 @@ bool sacd_disc_t::read_blocks_raw(uint32_t lb_start, size_t block_count, uint8_t
     switch (m_sector_size)
     {
         case SACD_LSN_SIZE:
-
+        {
             m_file->seek((uint64_t)lb_start * (uint64_t)SACD_LSN_SIZE);
 
             if (m_file->read(data, block_count * SACD_LSN_SIZE) != block_count * SACD_LSN_SIZE)
@@ -560,9 +501,9 @@ bool sacd_disc_t::read_blocks_raw(uint32_t lb_start, size_t block_count, uint8_t
             }
 
             break;
-
+        }
         case SACD_PSN_SIZE:
-
+        {
             for (uint32_t i = 0; i < block_count; i++)
             {
                 m_file->seek((uint64_t)(lb_start + i) * (uint64_t)SACD_PSN_SIZE + 12);
@@ -575,16 +516,18 @@ bool sacd_disc_t::read_blocks_raw(uint32_t lb_start, size_t block_count, uint8_t
             }
 
             break;
+        }
     }
 
     return true;
 }
 
-bool sacd_disc_t::read_master_toc() {
-    uint8_t*      p;
+bool sacd_disc_t::read_master_toc()
+{
+    uint8_t* p;
     master_toc_t* master_toc;
-
     m_sb.master_data = (uint8_t*)malloc(MASTER_TOC_LEN * SACD_LSN_SIZE);
+
     if (!m_sb.master_data)
         return false;
 
@@ -592,6 +535,7 @@ bool sacd_disc_t::read_master_toc() {
         return false;
 
     master_toc = m_sb.master_toc = (master_toc_t*)m_sb.master_data;
+
     if (strncmp("SACDMTOC", master_toc->id, 8) != 0)
         return false;
 
@@ -612,7 +556,8 @@ bool sacd_disc_t::read_master_toc() {
     p = m_sb.master_data + SACD_LSN_SIZE;
 
     // set pointers to text content
-    for (int i = 0; i < MAX_LANGUAGE_COUNT; i++) {
+    for (int i = 0; i < MAX_LANGUAGE_COUNT; i++)
+    {
         master_sacd_text_t* master_text = (master_sacd_text_t*)p;
 
         if (strncmp("SACDText", master_text->id, 8) != 0)
@@ -636,60 +581,78 @@ bool sacd_disc_t::read_master_toc() {
         SWAP16(master_text->disc_copyright_phonetic_position);
 
         // we only use the first SACDText entry
-        if (i == 0) {
+        if (i == 0)
+        {
             uint8_t current_charset = m_sb.master_toc->locales[i].character_set & 0x07;
 
             if (master_text->album_title_position)
                 m_sb.master_text.album_title = charset_convert((char*)master_text + master_text->album_title_position, strlen((char*)master_text + master_text->album_title_position), current_charset);
+
             if (master_text->album_title_phonetic_position)
                 m_sb.master_text.album_title_phonetic = charset_convert((char*)master_text + master_text->album_title_phonetic_position, strlen((char*)master_text + master_text->album_title_phonetic_position), current_charset);
+
             if (master_text->album_artist_position)
                 m_sb.master_text.album_artist = charset_convert((char*)master_text + master_text->album_artist_position, strlen((char*)master_text + master_text->album_artist_position), current_charset);
+
             if (master_text->album_artist_phonetic_position)
                 m_sb.master_text.album_artist_phonetic = charset_convert((char*)master_text + master_text->album_artist_phonetic_position, strlen((char*)master_text + master_text->album_artist_phonetic_position), current_charset);
+
             if (master_text->album_publisher_position)
                 m_sb.master_text.album_publisher = charset_convert((char*)master_text + master_text->album_publisher_position, strlen((char*)master_text + master_text->album_publisher_position), current_charset);
+
             if (master_text->album_publisher_phonetic_position)
                 m_sb.master_text.album_publisher_phonetic = charset_convert((char*)master_text + master_text->album_publisher_phonetic_position, strlen((char*)master_text + master_text->album_publisher_phonetic_position), current_charset);
+
             if (master_text->album_copyright_position)
                 m_sb.master_text.album_copyright = charset_convert((char*)master_text + master_text->album_copyright_position, strlen((char*)master_text + master_text->album_copyright_position), current_charset);
+
             if (master_text->album_copyright_phonetic_position)
                 m_sb.master_text.album_copyright_phonetic = charset_convert((char*)master_text + master_text->album_copyright_phonetic_position, strlen((char*)master_text + master_text->album_copyright_phonetic_position), current_charset);
 
             if (master_text->disc_title_position)
                 m_sb.master_text.disc_title = charset_convert((char*)master_text + master_text->disc_title_position, strlen((char*)master_text + master_text->disc_title_position), current_charset);
+
             if (master_text->disc_title_phonetic_position)
                 m_sb.master_text.disc_title_phonetic = charset_convert((char*)master_text + master_text->disc_title_phonetic_position, strlen((char*)master_text + master_text->disc_title_phonetic_position), current_charset);
+
             if (master_text->disc_artist_position)
                 m_sb.master_text.disc_artist = charset_convert((char*)master_text + master_text->disc_artist_position, strlen((char*)master_text + master_text->disc_artist_position), current_charset);
+
             if (master_text->disc_artist_phonetic_position)
                 m_sb.master_text.disc_artist_phonetic = charset_convert((char*)master_text + master_text->disc_artist_phonetic_position, strlen((char*)master_text + master_text->disc_artist_phonetic_position), current_charset);
+
             if (master_text->disc_publisher_position)
                 m_sb.master_text.disc_publisher = charset_convert((char*)master_text + master_text->disc_publisher_position, strlen((char*)master_text + master_text->disc_publisher_position), current_charset);
+
             if (master_text->disc_publisher_phonetic_position)
                 m_sb.master_text.disc_publisher_phonetic = charset_convert((char*)master_text + master_text->disc_publisher_phonetic_position, strlen((char*)master_text + master_text->disc_publisher_phonetic_position), current_charset);
+
             if (master_text->disc_copyright_position)
                 m_sb.master_text.disc_copyright = charset_convert((char*)master_text + master_text->disc_copyright_position, strlen((char*)master_text + master_text->disc_copyright_position), current_charset);
+
             if (master_text->disc_copyright_phonetic_position)
                 m_sb.master_text.disc_copyright_phonetic = charset_convert((char*)master_text + master_text->disc_copyright_phonetic_position, strlen((char*)master_text + master_text->disc_copyright_phonetic_position), current_charset);
         }
+
         p += SACD_LSN_SIZE;
     }
 
     m_sb.master_man = (master_man_t*)p;
+
     if (strncmp("SACD_Man", m_sb.master_man->id, 8) != 0)
         return false;
+
     return true;
 }
 
 bool sacd_disc_t::read_area_toc(int area_idx)
 {
-    area_toc_t*         area_toc;
-    uint8_t*            area_data;
-    uint8_t*            p;
-    int                 sacd_text_idx = 0;
+    area_toc_t* area_toc;
+    uint8_t* area_data;
+    uint8_t* p;
+    int sacd_text_idx = 0;
     scarletbook_area_t* area = &m_sb.area[area_idx];
-    uint8_t             current_charset;
+    uint8_t current_charset;
 
     p = area_data = area->area_data;
     area_toc = area->area_toc = (area_toc_t*)area_data;
@@ -712,11 +675,14 @@ bool sacd_disc_t::read_area_toc(int area_idx)
     current_charset = area->area_toc->languages[sacd_text_idx].character_set & 0x07;
 
     if (area_toc->copyright_offset)
-        area->description_phonetic = charset_convert((char*)area_toc + area_toc->copyright_offset, strlen((char*)area_toc + area_toc->copyright_offset), current_charset);
+        area->copyright = charset_convert((char*)area_toc + area_toc->copyright_offset, strlen((char*)area_toc + area_toc->copyright_offset), current_charset);
+
     if (area_toc->copyright_phonetic_offset)
-        area->description_phonetic = charset_convert((char*)area_toc + area_toc->copyright_phonetic_offset, strlen((char*)area_toc + area_toc->copyright_phonetic_offset), current_charset);
+        area->copyright_phonetic = charset_convert((char*)area_toc + area_toc->copyright_phonetic_offset, strlen((char*)area_toc + area_toc->copyright_phonetic_offset), current_charset);
+
     if (area_toc->area_description_offset)
-        area->description_phonetic = charset_convert((char*)area_toc + area_toc->area_description_offset, strlen((char*)area_toc + area_toc->area_description_offset), current_charset);
+        area->description = charset_convert((char*)area_toc + area_toc->area_description_offset, strlen((char*)area_toc + area_toc->area_description_offset), current_charset);
+
     if (area_toc->area_description_phonetic_offset)
         area->description_phonetic = charset_convert((char*)area_toc + area_toc->area_description_phonetic_offset, strlen((char*)area_toc + area_toc->area_description_phonetic_offset), current_charset);
 
@@ -742,8 +708,8 @@ bool sacd_disc_t::read_area_toc(int area_idx)
                 for (uint8_t i = 0; i < area_toc->track_count; i++)
                 {
                     area_text_t* area_text;
-                    uint8_t      track_type, track_amount;
-                    char*        track_ptr;
+                    uint8_t track_type, track_amount;
+                    char* track_ptr;
                     area_text = area->area_text = (area_text_t*)p;
                     SWAP16(area_text->track_text_position[i]);
 
@@ -757,8 +723,8 @@ bool sacd_disc_t::read_area_toc(int area_idx)
                         {
                             track_type = *track_ptr;
                             track_ptr++;
-                            track_ptr++;
-                                                  // skip unknown 0x20
+                            track_ptr++; // skip unknown 0x20
+
                             if (*track_ptr != 0)
                             {
                                 switch (track_type)
@@ -797,8 +763,8 @@ bool sacd_disc_t::read_area_toc(int area_idx)
                                         area->area_track_text[i].track_type_composer_phonetic = charset_convert(track_ptr, strlen(track_ptr), current_charset);
                                         break;
                                     case TRACK_TYPE_ARRANGER_PHONETIC:
-                                            area->area_track_text[i].track_type_arranger_phonetic = charset_convert(track_ptr, strlen(track_ptr), current_charset);
-                                            break;
+                                        area->area_track_text[i].track_type_arranger_phonetic = charset_convert(track_ptr, strlen(track_ptr), current_charset);
+                                        break;
                                     case TRACK_TYPE_MESSAGE_PHONETIC:
                                         area->area_track_text[i].track_type_message_phonetic = charset_convert(track_ptr, strlen(track_ptr), current_charset);
                                         break;
@@ -812,6 +778,7 @@ bool sacd_disc_t::read_area_toc(int area_idx)
                             {
                                 while (*track_ptr != 0)
                                     track_ptr++;
+
                                 while (*track_ptr == 0)
                                     track_ptr++;
                             }
@@ -823,27 +790,32 @@ bool sacd_disc_t::read_area_toc(int area_idx)
             sacd_text_idx++;
             p += SACD_LSN_SIZE;
         }
-        else if (strncmp((char*)p, "SACD_IGL", 8) == 0) {
+        else if (strncmp((char*)p, "SACD_IGL", 8) == 0)
+        {
             area->area_isrc_genre = (area_isrc_genre_t*)p;
             p += SACD_LSN_SIZE * 2;
         }
-        else if (strncmp((char*)p, "SACD_ACC", 8) == 0) {
+        else if (strncmp((char*)p, "SACD_ACC", 8) == 0)
+        {
             // skip
             p += SACD_LSN_SIZE * 32;
         }
-        else if (strncmp((char*)p, "SACDTRL1", 8) == 0) {
+        else if (strncmp((char*)p, "SACDTRL1", 8) == 0)
+        {
             area_tracklist_offset_t* tracklist;
             tracklist = area->area_tracklist_offset = (area_tracklist_offset_t*)p;
-            for (uint8_t i = 0; i < area_toc->track_count; i++) {
+
+            for (uint8_t i = 0; i < area_toc->track_count; i++)
+            {
                 SWAP32(tracklist->track_start_lsn[i]);
                 SWAP32(tracklist->track_length_lsn[i]);
             }
+
             p += SACD_LSN_SIZE;
         }
         else if (strncmp((char*)p, "SACDTRL2", 8) == 0)
         {
-            /*area_tracklist_time_t* tracklist;
-            tracklist = area->area_tracklist_time = (area_tracklist_time_t*)p;*/
+            area->area_tracklist_time = (area_tracklist_time_t*)p;
             p += SACD_LSN_SIZE;
         }
         else
@@ -851,6 +823,7 @@ bool sacd_disc_t::read_area_toc(int area_idx)
             break;
         }
     }
+
     return true;
 }
 

@@ -1,33 +1,27 @@
 /*
-* Downsampler/Resampler with single/double precision
-* Copyright (c) 2012 Vladislav Goncharov <vl-g@yandex.ru>
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU Lesser General Public
-* License as published by the Free Software Foundation; either
-* version 2.1 of the License, or (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-* Lesser General Public License for more details.
-*
-* You should have received a copy of the GNU Lesser General Public
-* License along with FFmpeg; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+    Copyright 2015 Robert Tari <robert.tari@gmail.com>
+    Copyright 2012 Vladislav Goncharov <vl-g@yandex.ru>
+
+    This file is part of SACD.
+
+    SACD is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    SACD is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
-// this is the stub file included twice from upsampler_p.h
-#ifndef FIR_DOUBLE_PRECISION
-#error FIR_DOUBLE_PRECISION must be defined to 0 or to 1
-#endif
+#ifndef _upsampler_h_
+#define _upsampler_h_
 
-// can't use templates due to memory align and SSE use
-#if FIR_DOUBLE_PRECISION
-# define SAMPLE_T double
-#else
-# define SAMPLE_T float
-#endif
+#include "dither.h"
 
 // history buffer for FIR
 class FirHistory
@@ -38,11 +32,11 @@ public:
     FirHistory&  operator=(const FirHistory &obj);
     void pushSample(double x);
     void reset(bool reset_to_1 = false);
-    SAMPLE_T *getBuffer() { return &m_x[m_head]; }
+    double *getBuffer() { return &m_x[m_head]; }
     unsigned int getSize() const { return m_fir_size; }
 
 private:
-    SAMPLE_T *m_x; // [m_fir_size * 2]
+    double *m_x; // [m_fir_size * 2]
     unsigned int m_fir_size;
     unsigned int m_head; // write to m_x[--head]
 };
@@ -58,13 +52,13 @@ public:
     double processSample(double x);
     void reset(bool reset_to_1 = false);
     void pushSample(double x);
-    double fast_convolve(SAMPLE_T *x);
-    const SAMPLE_T *getFir() const { return m_fir; }
+    double fast_convolve(double *x);
+    const double *getFir() const { return m_fir; }
     unsigned int getFirSize() const { return m_org_fir_size; }
 
 private:
-    SAMPLE_T *m_fir; // [m_fir_size], aligned
-    SAMPLE_T *m_fir_alloc;
+    double *m_fir; // [m_fir_size], aligned
+    double *m_fir_alloc;
     FirHistory m_x;
     unsigned int m_fir_size; // aligned
     unsigned int m_org_fir_size;
@@ -103,4 +97,7 @@ private:
     unsigned int m_xN_counter; // how many virtually upsampled samples we have in FirHistory?
 };
 
-#undef SAMPLE_T
+// generate windowed sinc impulse response for low-pass filter
+void generateFilter(double *impulse, int taps, double sinc_freq);
+
+#endif

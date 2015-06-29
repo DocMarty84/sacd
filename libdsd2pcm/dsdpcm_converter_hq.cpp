@@ -63,7 +63,6 @@ int dsdpcm_converter_hq::init(int channels, int dsd_samplerate, int pcm_samplera
     int i, taps, sinc_freq, multiplier, divisor;
     conv_mode_t nConvMode;
 
-    // common part
     this->m_nChannels = channels;
     this->m_nDsdSamplerate = dsd_samplerate;
     this->m_nPcmSamplerate = pcm_samplerate;
@@ -108,6 +107,44 @@ int dsdpcm_converter_hq::init(int channels, int dsd_samplerate, int pcm_samplera
             return -2;
         }
         break;
+    case DSDxFs256:
+        switch (pcm_samplerate)
+        {
+        case DSDxFs2:
+            nConvMode = DSD256_88200;
+            break;
+        case 96000:
+            nConvMode = DSD256_96000;
+            break;
+        case DSDxFs4:
+            nConvMode = DSD256_176400;
+            break;
+        case 192000:
+            nConvMode = DSD256_192000;
+            break;
+        default:
+            return -2;
+        }
+        break;
+    case DSDxFs512:
+        switch (pcm_samplerate)
+        {
+        case DSDxFs2:
+            nConvMode = DSD512_88200;
+            break;
+        case 96000:
+            nConvMode = DSD512_96000;
+            break;
+        case DSDxFs4:
+            nConvMode = DSD512_176400;
+            break;
+        case 192000:
+            nConvMode = DSD512_192000;
+            break;
+        default:
+            return -2;
+        }
+        break;
     default:
         return -1;
         break;
@@ -125,50 +162,88 @@ int dsdpcm_converter_hq::init(int channels, int dsd_samplerate, int pcm_samplera
 
     switch (nConvMode)
     {
-    //DSD64 stuff
-    case DSD64_88200:
-        multiplier = 1;
-        divisor = 1;
-        m_use_resampler = false;
-        break;
-    case DSD64_176400:
-        multiplier = 1;
-        divisor = 2;
-        m_use_resampler = false;
-        break;
-    case DSD64_96000:
-        multiplier = 1;
-        divisor = 1;
-        m_use_resampler = true;
-        break;
-    case DSD64_192000:
-        multiplier = 1;
-        divisor = 2;
-        m_use_resampler = true;
-        break;
-    //DSD128 stuff
-    case DSD128_88200:
-        multiplier = 2;
-        divisor = 1;
-        m_use_resampler = false;
-        break;
-    case DSD128_96000:
-        multiplier = 2;
-        divisor = 1;
-        m_use_resampler = true;
-        break;
-    case DSD128_176400:
-        multiplier = 2;
-        divisor = 2;
-        m_use_resampler = false;
-        break;
-    case DSD128_192000:
-        multiplier = 2;
-        divisor = 2;
-        m_use_resampler = true;
-        break;
-    default:
-        return -1;
+        case DSD64_88200:
+            multiplier = 1;
+            divisor = 1;
+            m_use_resampler = false;
+            break;
+        case DSD64_96000:
+            multiplier = 1;
+            divisor = 1;
+            m_use_resampler = true;
+            break;
+        case DSD64_176400:
+            multiplier = 1;
+            divisor = 2;
+            m_use_resampler = false;
+            break;
+        case DSD64_192000:
+            multiplier = 1;
+            divisor = 2;
+            m_use_resampler = true;
+            break;
+        case DSD128_88200:
+            multiplier = 2;
+            divisor = 1;
+            m_use_resampler = false;
+            break;
+        case DSD128_96000:
+            multiplier = 2;
+            divisor = 1;
+            m_use_resampler = true;
+            break;
+        case DSD128_176400:
+            multiplier = 2;
+            divisor = 2;
+            m_use_resampler = false;
+            break;
+        case DSD128_192000:
+            multiplier = 2;
+            divisor = 2;
+            m_use_resampler = true;
+            break;
+        case DSD256_88200:
+            multiplier = 4;
+            divisor = 1;
+            m_use_resampler = false;
+            break;
+        case DSD256_96000:
+            multiplier = 4;
+            divisor = 1;
+            m_use_resampler = true;
+            break;
+        case DSD256_176400:
+            multiplier = 4;
+            divisor = 2;
+            m_use_resampler = false;
+            break;
+        case DSD256_192000:
+            multiplier = 4;
+            divisor = 2;
+            m_use_resampler = true;
+            break;
+        case DSD512_88200:
+            multiplier = 8;
+            divisor = 1;
+            m_use_resampler = false;
+            break;
+        case DSD512_96000:
+            multiplier = 8;
+            divisor = 1;
+            m_use_resampler = true;
+            break;
+        case DSD512_176400:
+            multiplier = 8;
+            divisor = 2;
+            m_use_resampler = false;
+            break;
+        case DSD512_192000:
+            multiplier = 8;
+            divisor = 2;
+            m_use_resampler = true;
+            break;
+        default:
+            return -1;
     }
 
     if (!m_use_resampler)

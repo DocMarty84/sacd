@@ -1,3 +1,10 @@
+sacd (15.06.29) trusty; urgency=medium
+
+  * Added support for DSD256 and DSD512
+  * Removed single-precision filters
+
+ -- Robert Tari <robert.tari@gmail.com>  Mon, 29 Jun 2015 02:42:46 +0200
+
 sacd (15.06.26) trusty; urgency=medium
 
   * Added multiple sample rates

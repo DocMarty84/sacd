@@ -49,13 +49,10 @@ dst_init: types.h ccp_calc.h conststr.h dst_init.h dst_init.cpp
 dst_decoder: types.h dst_unpack.h dst_fram.h dst_init.h dst_decoder.h dst_decoder.cpp
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c libdstdec/dst_decoder.cpp -o libdstdec/dst_decoder.o
 
-upsampler: upsampler.h upsampler.cpp
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c libdsd2pcm/upsampler.cpp -o libdsd2pcm/upsampler.o
+upsampler_p: dither.h upsampler.h upsampler.cpp
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c libdsd2pcm/upsampler.cpp -o libdsd2pcm/upsampler_p.o
 
-upsampler_p: dither.h upsampler.h upsampler.cpp upsampler_p.h upsampler_p.cpp
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c libdsd2pcm/upsampler_p.cpp -o libdsd2pcm/upsampler_p.o
-
-dsdpcm_converter_hq: upsampler_p.h dsdpcm_converter_hq.h dsdpcm_converter_hq.cpp
+dsdpcm_converter_hq: upsampler.h dsdpcm_converter_hq.h dsdpcm_converter_hq.cpp
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c libdsd2pcm/dsdpcm_converter_hq.cpp -o libdsd2pcm/dsdpcm_converter_hq.o
 
 scarletbook: scarletbook.h scarletbook.cpp

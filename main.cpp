@@ -105,9 +105,9 @@ public:
 
     input_sacd_t()
     {
-        m_pSacdMedia = NULL;
-        m_pSacdReader = NULL;
-        m_pDsdPcmConverter = NULL;
+        m_pSacdMedia = nullptr;
+        m_pSacdReader = nullptr;
+        m_pDsdPcmConverter = nullptr;
         m_bDstDecInit = false;
         m_fProgress = 0;
     }

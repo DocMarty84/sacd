@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <math.h>
-#include "upsampler_p.h"
+#include "upsampler.h"
 
 #define DSDxFs1 (44100 * 1)
 #define DSDxFs2 (44100 * 2)
@@ -32,10 +32,12 @@
 #define DSDxFs8 (44100 * 8)
 #define DSDxFs64 (44100 * 64)
 #define DSDxFs128 (44100 * 128)
+#define DSDxFs256 (44100 * 256)
+#define DSDxFs512 (44100 * 512)
 #define DSDPCM_MAX_CHANNELS 6
 #define DSDPCM_MAX_SAMPLES (DSDxFs128 / 75 / 8 * DSDPCM_MAX_CHANNELS)
 
-enum conv_mode_t {DSD64_88200, DSD64_176400, DSD64_352800, DSD128_88200, DSD128_176400, DSD128_352800, DSD64_96000, DSD128_96000, DSD64_192000, DSD128_192000};
+enum conv_mode_t {DSD64_88200, DSD64_176400, DSD64_352800, DSD128_88200, DSD128_176400, DSD128_352800, DSD64_96000, DSD128_96000, DSD64_192000, DSD128_192000, DSD256_88200, DSD256_96000, DSD256_176400, DSD256_192000, DSD512_88200, DSD512_96000, DSD512_176400, DSD512_192000};
 typedef uint8_t dsd_sample_t[DSDPCM_MAX_CHANNELS];
 
 class dsdpcm_converter_hq
@@ -63,9 +65,6 @@ private:
     static const int MAX_DECIMATION = 32 * 2; // 64x -> 88.2 (44.1 not supported, 128x not supported)
     static const int MAX_RESAMPLING_IN = 147 * 2; // 64x -> 96  (147 -> 5 for 64x -> 96, 128x not supported)
     static const int MAX_RESAMPLING_OUT = 5 * 2; // 147 -> 5 for 64x -> 96
-
-    typedef DownsamplerNx_64 DownsamplerNx;
-    typedef ResamplerNxMx_64 ResamplerNxMx;
 
     DownsamplerNx *m_dn[DSDPCM_MAX_CHANNELS];
     ResamplerNxMx *m_resampler[DSDPCM_MAX_CHANNELS];
