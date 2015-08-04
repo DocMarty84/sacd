@@ -25,15 +25,15 @@
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
-sacd_media_file_t::sacd_media_file_t()
+sacd_media_t::sacd_media_t()
 {
 }
 
-sacd_media_file_t::~sacd_media_file_t()
+sacd_media_t::~sacd_media_t()
 {
 }
 
-bool sacd_media_file_t::open(const char* path)
+bool sacd_media_t::open(const char* path)
 {
     try
     {
@@ -48,33 +48,35 @@ bool sacd_media_file_t::open(const char* path)
     return false;
 }
 
-bool sacd_media_file_t::close()
+bool sacd_media_t::close()
 {
+    fclose(media_file);
+
     return true;
 }
 
-bool sacd_media_file_t::seek(int64_t position, int mode)
+bool sacd_media_t::seek(int64_t position, int mode)
 {
     fseek(media_file, position, mode);
     return true;
 }
 
-int64_t sacd_media_file_t::get_position()
+int64_t sacd_media_t::get_position()
 {
     return ftell(media_file);
 }
 
-size_t sacd_media_file_t::read(void* data, size_t size)
+size_t sacd_media_t::read(void* data, size_t size)
 {
     return fread(data, 1, size, media_file);
 }
 
-int64_t sacd_media_file_t::skip(int64_t bytes)
+int64_t sacd_media_t::skip(int64_t bytes)
 {
     return fseek(media_file, bytes, SEEK_CUR);
 }
 
-string sacd_media_file_t::getFileName()
+string sacd_media_t::getFileName()
 {
     m_strFilePath = m_strFilePath.substr(m_strFilePath.find_last_of("/") + 1, string::npos);
     return m_strFilePath.substr(0, m_strFilePath.find_last_of(".")) + ".wav";

@@ -30,25 +30,11 @@ using namespace std;
 
 class sacd_media_t
 {
-public:
-    sacd_media_t() {}
-    virtual ~sacd_media_t() {}
-    virtual bool open(const char* path) = 0;
-    virtual bool close() = 0;
-    virtual bool seek(int64_t position, int mode = SEEK_SET) = 0;
-    virtual int64_t get_position() = 0;
-    virtual size_t read(void* data, size_t size) = 0;
-    virtual int64_t skip(int64_t bytes) = 0;
-    virtual string getFileName() = 0;
-};
-
-class sacd_media_file_t : public sacd_media_t
-{
     FILE * media_file;
     string m_strFilePath;
 public:
-    sacd_media_file_t();
-    virtual ~sacd_media_file_t();
+    sacd_media_t();
+    virtual ~sacd_media_t();
     virtual bool open(const char* path);
     virtual bool close();
     virtual bool seek(int64_t position, int mode = SEEK_SET);

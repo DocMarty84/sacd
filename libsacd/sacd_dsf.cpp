@@ -76,7 +76,7 @@ bool sacd_dsf_t::is_dst()
     return false;
 }
 
-int sacd_dsf_t::open(sacd_media_t* p_file, uint32_t mode)
+int sacd_dsf_t::open(sacd_media_t* p_file)
 {
     m_file = p_file;
     Chunk ck;
@@ -200,7 +200,7 @@ string sacd_dsf_t::set_track(uint32_t track_number, area_id_e area_id, uint32_t 
     return m_file->getFileName();
 }
 
-bool sacd_dsf_t::read_frame(uint8_t* frame_data, int* frame_size, frame_type_e* frame_type)
+bool sacd_dsf_t::read_frame(uint8_t* frame_data, size_t* frame_size, frame_type_e* frame_type)
 {
     for (int i = 0; i < (int)*frame_size / m_channel_count; i++)
     {

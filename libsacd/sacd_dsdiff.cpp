@@ -70,14 +70,12 @@ bool sacd_dsdiff_t::is_dst()
     return m_dst_encoded != 0;
 }
 
-int sacd_dsdiff_t::open(sacd_media_t* p_file, uint32_t mode)
+int sacd_dsdiff_t::open(sacd_media_t* p_file)
 {
     m_file = p_file;
     m_dsti_size = 0;
     Chunk ck;
     ID id;
-    bool skip_emaster_chunks = (mode & MODE_SINGLE_TRACK) == MODE_SINGLE_TRACK;
-    bool full_playback = (mode & MODE_FULL_PLAYBACK) == MODE_FULL_PLAYBACK;
     uint32_t start_mark_count = 0;
     id3tags_t t_old;
     m_subsong.resize(0);
@@ -279,7 +277,7 @@ int sacd_dsdiff_t::open(sacd_media_t* p_file, uint32_t mode)
             m_dsti_size = ck.get_size();
             m_file->skip(ck.get_size());
         }
-        else if (ck.has_id("DIIN") && !skip_emaster_chunks)
+        else if (ck.has_id("DIIN"))
         {
             uint64_t id_diin_size = ck.get_size();
             uint64_t id_diin_read = 0;
@@ -335,12 +333,9 @@ int sacd_dsdiff_t::open(sacd_media_t* p_file, uint32_t mode)
                             }
                             case TrackStop:
                             {
-                                if (!full_playback)
+                                if (m_subsong.size() > 0)
                                 {
-                                    if (m_subsong.size() > 0)
-                                    {
-                                        m_subsong[m_subsong.size() - 1].stop_time = MARK_TIME(m);
-                                    }
+                                    m_subsong[m_subsong.size() - 1].stop_time = MARK_TIME(m);
                                 }
 
                                 break;
@@ -359,7 +354,7 @@ int sacd_dsdiff_t::open(sacd_media_t* p_file, uint32_t mode)
                 m_file->skip(m_file->get_position() & 1);
             }
         }
-        else if (ck.has_id("ID3 ") && !skip_emaster_chunks)
+        else if (ck.has_id("ID3 "))
         {
             id3tags_t t;
             t.index  = m_id3tags.size();
@@ -450,7 +445,7 @@ string sacd_dsdiff_t::set_track(uint32_t track_number, area_id_e area_id, uint32
     return m_file->getFileName();
 }
 
-bool sacd_dsdiff_t::read_frame(uint8_t* frame_data, int* frame_size, frame_type_e* frame_type)
+bool sacd_dsdiff_t::read_frame(uint8_t* frame_data, size_t* frame_size, frame_type_e* frame_type)
 {
     if (m_dst_encoded)
     {

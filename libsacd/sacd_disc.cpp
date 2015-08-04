@@ -162,7 +162,7 @@ bool sacd_disc_t::is_dst()
     return false;
 }
 
-int sacd_disc_t::open(sacd_media_t* p_file, uint32_t mode)
+int sacd_disc_t::open(sacd_media_t* p_file)
 {
     m_file = p_file;
     m_sb.master_data = nullptr;
@@ -340,7 +340,7 @@ string sacd_disc_t::set_track(uint32_t track_number, area_id_e area_id, uint32_t
     return "";
 }
 
-bool sacd_disc_t::read_frame(uint8_t* frame_data, int* frame_size, frame_type_e* frame_type)
+bool sacd_disc_t::read_frame(uint8_t* frame_data, size_t* frame_size, frame_type_e* frame_type)
 {
     m_sector_bad_reads = 0;
 
@@ -408,7 +408,7 @@ bool sacd_disc_t::read_frame(uint8_t* frame_data, int* frame_size, frame_type_e*
                     {
                         if (packet->frame_start)
                         {
-                            if (m_frame.size <= *frame_size)
+                            if (m_frame.size <= (int)(*frame_size))
                             {
                                 memcpy(frame_data, m_frame.data, m_frame.size);
                                 *frame_size = m_frame.size;
@@ -437,7 +437,7 @@ bool sacd_disc_t::read_frame(uint8_t* frame_data, int* frame_size, frame_type_e*
 
                     if (m_frame.started)
                     {
-                        if (m_frame.size + packet->packet_length <= *frame_size && m_buffer_offset + packet->packet_length <= SACD_LSN_SIZE)
+                        if (m_frame.size + packet->packet_length <= (int)(*frame_size) && m_buffer_offset + packet->packet_length <= SACD_LSN_SIZE)
                         {
                             memcpy(m_frame.data + m_frame.size, m_buffer + m_buffer_offset, packet->packet_length);
                             m_frame.size += packet->packet_length;
@@ -463,7 +463,7 @@ bool sacd_disc_t::read_frame(uint8_t* frame_data, int* frame_size, frame_type_e*
 
     if (m_frame.started)
     {
-        if (m_frame.size <= *frame_size)
+        if (m_frame.size <= (int)(*frame_size))
         {
             memcpy(frame_data, m_frame.data, m_frame.size);
             *frame_size = m_frame.size;

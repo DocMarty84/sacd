@@ -25,9 +25,6 @@
 #include <string>
 #include "sacd_media.h"
 
-#define MODE_SINGLE_TRACK  1
-#define MODE_FULL_PLAYBACK 2
-
 using namespace std;
 
 enum area_id_e {AREA_BOTH = 0, AREA_TWOCH = 1, AREA_MULCH = 2};
@@ -38,7 +35,7 @@ class sacd_reader_t {
 public:
     sacd_reader_t() {}
     virtual ~sacd_reader_t() {}
-    virtual int open(sacd_media_t* p_file, uint32_t mode = 0) = 0;
+    virtual int open(sacd_media_t* p_file) = 0;
     virtual bool close() = 0;
     virtual uint32_t get_track_count(area_id_e area_id = AREA_BOTH) = 0;
     virtual int get_channels() = 0;
@@ -47,7 +44,7 @@ public:
     virtual float getProgress() = 0;
     virtual bool is_dst() = 0;
     virtual string set_track(uint32_t track_number, area_id_e area_id = AREA_BOTH, uint32_t offset = 0) = 0;
-    virtual bool read_frame(uint8_t* frame_data, int* frame_size, frame_type_e* frame_type) = 0;
+    virtual bool read_frame(uint8_t* frame_data, size_t* frame_size, frame_type_e* frame_type) = 0;
 };
 
 #endif

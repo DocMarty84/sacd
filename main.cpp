@@ -23,6 +23,7 @@
 #include <string>
 #include <cstring>
 #include <cmath>
+#include <thread>
 #include <stdio.h>
 #include <locale>
 #include <getopt.h>
@@ -35,25 +36,14 @@
 #include "libsacd/sacd_dsf.h"
 #include "libsacd/version.h"
 #include "libdsd2pcm/dsdpcm_converter_hq.h"
-#include "libdstdec/dst_decoder.h"
+#include "libdstdec/dst_decoder_mt.h"
 
-typedef struct
-{
-    const char * strIn;
-    const char * strOut;
-    bool bProgressLine;
-    int nSampleRate;
-
-} tThreadArgs;
-
-typedef struct
-{
-    int nTrack;
-    pthread_t hThread;
-    float fProgress;
-    tThreadArgs tArgs;
-
-} tTrackArgs;
+int g_nCPUs = 2;
+vector<int> g_arrQueue;
+pthread_mutex_t g_hMutex = PTHREAD_MUTEX_INITIALIZER;
+string g_strOut = "";
+int g_nSampleRate = 96000;
+bool g_bProgressLine = false;
 
 void packageInt(unsigned char * buf, int offset, int num, int bytes)
 {
@@ -80,39 +70,75 @@ string toLower(const string& s)
     return result;
 }
 
-class input_sacd_t
+class SACD
 {
+private:
+
     media_type_t m_tMediaType;
     sacd_media_t* m_pSacdMedia;
     sacd_reader_t* m_pSacdReader;
-    vector<uint8_t> m_arrDsdBuf;
-    int m_nDsdBufSize;
+    dst_decoder_t* m_pDstDecoder;
     vector<uint8_t> m_arrDstBuf;
-    int m_nDstBufSize;
+    vector<uint8_t> m_arrDsdBuf;
     vector<float> m_arrPcmBuf;
-    DstDec m_pDstDecoder;
+    int m_nDsdBufSize;
+    int m_nDstBufSize;
     dsdpcm_converter_hq* m_pDsdPcmConverter;
     int m_nDsdSamplerate;
     int m_nFramerate;
-    bool m_bDstDecInit;
+
+    void writeData(FILE * pFile, int nDegibbs, uint8_t* pDsdData, int nDsdSize)
+    {
+        bool bConvertCalled = m_pDsdPcmConverter->is_convert_called();
+        int nPcmSamples = m_pDsdPcmConverter->convert(pDsdData, m_arrPcmBuf.data(), nDsdSize);
+
+        if (nDegibbs == 1)
+        {
+            m_pDsdPcmConverter->degibbs(m_arrPcmBuf.data(), nPcmSamples, 1);
+        }
+        else if (!bConvertCalled)
+        {
+            m_pDsdPcmConverter->degibbs(m_arrPcmBuf.data(), nPcmSamples, 0);
+        }
+
+        int nDst = m_arrPcmBuf.size() * 3;
+        unsigned char * pDst = new unsigned char[nDst];
+        float * pSrc = m_arrPcmBuf.data();
+
+        for(int i = 0; i != nDst; i += 3)
+        {
+            int nVal = lrintf ((*pSrc++) * 8388607.0) ;
+
+            pDst[i] = nVal;
+            pDst[i+1] = nVal >> 8;
+            pDst[i+2] = nVal >> 16;
+        }
+
+        fwrite(pDst, sizeof(unsigned char), nDst, pFile);
+        delete[] pDst;
+
+        m_fProgress = m_pSacdReader->getProgress();
+    }
 
 public:
 
+    int m_nTracks;
+    float m_fProgress;
     bool m_bTrackCompleted;
     int m_nPcmOutChannels;
     unsigned int m_nPcmOutChannelMap;
-    float m_fProgress;
 
-    input_sacd_t()
+    SACD()
     {
         m_pSacdMedia = nullptr;
         m_pSacdReader = nullptr;
         m_pDsdPcmConverter = nullptr;
-        m_bDstDecInit = false;
+        m_pDstDecoder = nullptr;
         m_fProgress = 0;
+        m_nTracks = 0;
     }
 
-    ~input_sacd_t()
+    ~SACD()
     {
         if (m_pSacdReader)
         {
@@ -124,21 +150,19 @@ public:
             delete m_pSacdMedia;
         }
 
-        if (m_bDstDecInit)
-        {
-            Close(&m_pDstDecoder);
-        }
-
         if (m_pDsdPcmConverter)
         {
             delete m_pDsdPcmConverter;
+        }
+
+        if (m_pDstDecoder)
+        {
+            dst_decoder_destroy_mt(m_pDstDecoder);
         }
     }
 
     int open(string p_path)
     {
-        int nTracks = 0;
-
         string ext = toLower(p_path.substr(p_path.length()-3, 3));
         m_tMediaType = UNK_TYPE;
 
@@ -165,7 +189,7 @@ public:
             return 0;
         }
 
-        m_pSacdMedia = new sacd_media_file_t();
+        m_pSacdMedia = new sacd_media_t();
 
         if (!m_pSacdMedia)
         {
@@ -211,16 +235,16 @@ public:
             return 0;
         }
 
-        if ((nTracks = m_pSacdReader->open(m_pSacdMedia, 0)) == 0)
+        if ((m_nTracks = m_pSacdReader->open(m_pSacdMedia)) == 0)
         {
             printf("PANIC: Failed to parse SACD media\n");
             return 0;
         }
 
-        return nTracks;
+        return m_nTracks;
     }
 
-    string decode_initialize(uint32_t nSubsong, int nSampleRate)
+    string init(uint32_t nSubsong, int g_nSampleRate)
     {
         string strFileName = "";
 
@@ -253,82 +277,71 @@ public:
                 break;
         }
 
-        m_pDsdPcmConverter = new dsdpcm_converter_hq();
         m_nDstBufSize = m_nDsdBufSize = m_nDsdSamplerate / 8 / m_nFramerate * m_nPcmOutChannels;
-        m_arrDsdBuf.resize(m_nDsdBufSize);
-        m_arrDstBuf.resize(m_nDstBufSize);
-        m_arrPcmBuf.resize(m_nPcmOutChannels * nSampleRate / 75);
-        m_pDsdPcmConverter->init(m_nPcmOutChannels, m_nDsdSamplerate, nSampleRate);
+        m_arrDsdBuf.resize(m_nDsdBufSize * g_nCPUs);
+        m_arrDstBuf.resize(m_nDstBufSize * g_nCPUs);
+        m_arrPcmBuf.resize(m_nPcmOutChannels * g_nSampleRate / 75);
+        m_pDsdPcmConverter = new dsdpcm_converter_hq();
+        m_pDsdPcmConverter->init(m_nPcmOutChannels, m_nDsdSamplerate, g_nSampleRate);
         m_bTrackCompleted = false;
 
         return strFileName;
     }
 
-    int decode(FILE * pFile)
+    bool decode(FILE* pFile)
     {
         if (m_bTrackCompleted)
         {
-            return false;
+            return true;
         }
 
-        int dsd_size = 0;
-        int dst_size = 0;
-        int pcm_samples;
-        int nFrame = 0;
+        uint8_t* pDsdData;
+        uint8_t* pDstData;
+        size_t nDsdSize = 0;
+        size_t nDstSize = 0;
+        int nThread = 0;
 
         while (1)
         {
-            dst_size = m_nDstBufSize;
-            frame_type_e frame_type;
+            nThread = m_pDstDecoder ? m_pDstDecoder->slot_nr : 0;
+            pDsdData = m_arrDsdBuf.data() + m_nDsdBufSize * nThread;
+            pDstData = m_arrDstBuf.data() + m_nDstBufSize * nThread;
+            nDstSize = m_nDstBufSize;
+            frame_type_e nFrameType;
 
-            if (m_pSacdReader->read_frame(m_arrDstBuf.data(), &dst_size, &frame_type))
+            if (m_pSacdReader->read_frame(pDstData, &nDstSize, &nFrameType))
             {
-                if (dst_size > 0)
+                if (nDstSize > 0)
                 {
-                    if (frame_type == FRAME_INVALID)
+                    if (nFrameType == FRAME_INVALID)
                     {
-                        dst_size = m_nDstBufSize;
-                        memset(m_arrDstBuf.data(), 0xAA, dst_size);
+                        nDstSize = m_nDstBufSize;
+                        memset(pDstData, 0xAA, nDstSize);
                     }
 
-                    if (frame_type == FRAME_DST)
+                    if (nFrameType == FRAME_DST)
                     {
-                        if (!m_bDstDecInit)
+                        if (!m_pDstDecoder)
                         {
-                            if (Init(&m_pDstDecoder, m_nPcmOutChannels, m_nDstBufSize) != 0)
+                            if (dst_decoder_create_mt(&m_pDstDecoder, g_nCPUs) != 0 || dst_decoder_init_mt(m_pDstDecoder, m_nPcmOutChannels, m_nDsdSamplerate, m_nFramerate) != 0)
                             {
                                 return false;
                             }
-
-                            m_bDstDecInit = true;
                         }
 
-                        Decode(&m_pDstDecoder, m_arrDstBuf.data(), m_arrDsdBuf.data(), nFrame, &dst_size);
-                        dsd_size = m_nDstBufSize;
-
-                        nFrame++;
+                        dst_decoder_decode_mt(m_pDstDecoder, pDstData, nDstSize, &pDsdData, &nDsdSize);
                     }
                     else
                     {
-                        m_arrDsdBuf = m_arrDstBuf;
-                        dsd_size = dst_size;
+                        pDsdData = pDstData;
+                        nDsdSize = nDstSize;
                     }
 
-                    if (dsd_size > 0)
+                    if (nDsdSize > 0)
                     {
-                        if (!m_pDsdPcmConverter->is_convert_called())
-                        {
-                            pcm_samples = m_pDsdPcmConverter->convert(m_arrDsdBuf.data(), m_arrPcmBuf.data(), dsd_size);
-                            m_pDsdPcmConverter->degibbs(m_arrPcmBuf.data(), pcm_samples, 0);
-                        }
-                        else
-                        {
-                            m_pDsdPcmConverter->convert(m_arrDsdBuf.data(), m_arrPcmBuf.data(), dsd_size);
-                        }
+                        writeData(pFile, 0, pDsdData, nDsdSize);
 
-                        writeData(pFile, m_arrPcmBuf);
-
-                        return true;
+                        return false;
                     }
                 }
             }
@@ -338,126 +351,49 @@ public:
             }
         }
 
-        m_arrDsdBuf.clear();
-        m_arrDstBuf.clear();
-        dst_size = 0;
+        pDsdData = nullptr;
+        pDstData = nullptr;
+        nDstSize = 0;
 
-        if (m_bDstDecInit)
+        if (m_pDstDecoder)
         {
-            Decode(&m_pDstDecoder, m_arrDstBuf.data(), m_arrDsdBuf.data(), nFrame, &dst_size);
+            dst_decoder_decode_mt(m_pDstDecoder, pDstData, nDstSize, &pDsdData, &nDsdSize);
         }
 
-        if (dsd_size > 0)
+        if (nDsdSize > 0)
         {
-            m_pDsdPcmConverter->convert(m_arrDsdBuf.data(), m_arrPcmBuf.data(), dsd_size);
-            writeData(pFile, m_arrPcmBuf);
-            return true;
+            writeData(pFile, 0, pDsdData, nDsdSize);
+
+            return false;
         }
 
-        dsd_size = m_nDsdBufSize;
-        memset(m_arrDsdBuf.data(), 0xAA, dsd_size);
-        pcm_samples = m_pDsdPcmConverter->convert(m_arrDsdBuf.data(), m_arrPcmBuf.data(), dsd_size);
-        m_pDsdPcmConverter->degibbs(m_arrPcmBuf.data(), pcm_samples, 1);
-        writeData(pFile, m_arrPcmBuf);
+        pDsdData = m_arrDsdBuf.data();
+        nDsdSize = m_nDsdBufSize;
+        memset(pDsdData, 0xAA, nDsdSize);
+        writeData(pFile, 1, pDsdData, nDsdSize);
         m_bTrackCompleted = true;
 
-        return false;
-    }
-
-    void writeData(FILE * pFile, vector<float> audio_data)
-    {
-        int nDst = audio_data.size() * 3;
-        unsigned char * pDst = new unsigned char[nDst];
-        float * pSrc = audio_data.data();
-
-        for(int i = 0; i != nDst; i += 3)
-        {
-            int nVal = lrintf ((*pSrc++) * 8388607.0) ;
-
-            pDst[i] = nVal;
-            pDst[i+1] = nVal >> 8;
-            pDst[i+2] = nVal >> 16;
-        }
-
-        fwrite(pDst, sizeof(unsigned char), nDst, pFile);
-        delete[] pDst;
-
-        m_fProgress = m_pSacdReader->getProgress();
+        return true;
     }
 };
 
-void * fnThread (void* threadargs)
-{
-    tTrackArgs * ta = (tTrackArgs *)threadargs;
-    input_sacd_t * pSacd = new input_sacd_t();
-    int nTracks = pSacd->open(ta->tArgs.strIn);
-    string strOutFile = ta->tArgs.strOut + pSacd->decode_initialize(ta->nTrack, ta->tArgs.nSampleRate);
-
-    bool rd = true;
-    unsigned int nSize = 0x7fffffff;
-    unsigned char arrHeader[68];
-    unsigned char arrFormat[2] = {0xFE, 0xFF};
-    unsigned char arrSubtype[16] = {0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71};
-
-    memcpy (arrHeader, "RIFF", 4);
-    packageInt (arrHeader, 4, nSize - 8, 4);
-    memcpy (arrHeader + 8, "WAVE", 4);
-    memcpy (arrHeader + 12, "fmt ", 4);
-    packageInt (arrHeader, 16, 40, 4);
-    memcpy (arrHeader + 20, arrFormat, 2);
-    packageInt (arrHeader, 22, pSacd->m_nPcmOutChannels, 2);
-    packageInt (arrHeader, 24, ta->tArgs.nSampleRate, 4);
-    packageInt (arrHeader, 28, (ta->tArgs.nSampleRate * 24 * pSacd->m_nPcmOutChannels) / 8, 4);
-    packageInt (arrHeader, 32, pSacd->m_nPcmOutChannels * 3, 2);
-    packageInt (arrHeader, 34, 24, 2);
-    packageInt (arrHeader, 36, 22, 2);
-    packageInt (arrHeader, 38, 24, 2);
-    packageInt (arrHeader, 40, pSacd->m_nPcmOutChannelMap, 4);
-    memcpy (arrHeader + 44, arrSubtype, 16);
-    memcpy (arrHeader + 60, "data", 4);
-    packageInt (arrHeader, 64, nSize - 68, 4);
-    FILE * pFile = fopen(strOutFile.data(), "wb");
-    fwrite(arrHeader, 1, 68, pFile);
-
-    while (pSacd->m_bTrackCompleted == false || rd == true)
-    {
-        rd = pSacd->decode(pFile);
-        ta->fProgress = pSacd->m_fProgress;
-    }
-
-    nSize = ftell (pFile);
-    packageInt (arrHeader, 4, nSize - 8, 4);
-    packageInt (arrHeader, 64, nSize - 68, 4);
-    fseek (pFile, 0, SEEK_SET);
-    fwrite (arrHeader, 1, 68, pFile);
-    fclose(pFile);
-
-    ta->fProgress = 100;
-
-    if (ta->tArgs.bProgressLine)
-    {
-        printf("FILE\t%s\t%.2i\t%.2i\n", strOutFile.data(), ta->nTrack + 1, nTracks);
-    }
-
-    return 0;
-}
-
 void * fnProgress (void* threadargs)
 {
-    vector<tTrackArgs> * arrTA = (vector<tTrackArgs> *)threadargs;
+    vector<SACD*>* arrSACD = (vector<SACD*>*)threadargs;
 
     while(1)
     {
-        float fProgress = 0.0;
+        float fProgress = 0;
+        int nTracks = (*arrSACD).at(0)->m_nTracks;
 
-        for (size_t i = 0; i < arrTA->size(); i++)
+        for (int i = 0; i < g_nCPUs; i++)
         {
-            fProgress += arrTA->at(i).fProgress;
+            fProgress += (*arrSACD).at(i)->m_fProgress;
         }
 
-        fProgress = fProgress / arrTA->size();
+        fProgress = MAX(((((float)nTracks - (float)g_nCPUs - (float)g_arrQueue.size()) * 100.0) + fProgress) / (float)nTracks, 0);
 
-        if (arrTA->at(0).tArgs.bProgressLine)
+        if (g_bProgressLine)
         {
             printf("PROGRESS\t%.2f\n", fProgress);
         }
@@ -468,8 +404,10 @@ void * fnProgress (void* threadargs)
 
         fflush(stdout);
 
-        if(fProgress == 100)
+        if (fProgress == 100)
+        {
             break;
+        }
 
         sleep(1);
     }
@@ -477,14 +415,87 @@ void * fnProgress (void* threadargs)
     return 0;
 }
 
+void * fnDecoder (void* threadargs)
+{
+    SACD* pSACD = (SACD*)threadargs;
+
+    while(!g_arrQueue.empty())
+    {
+        pthread_mutex_lock(&g_hMutex);
+
+        int nTrack = g_arrQueue.front();
+        g_arrQueue.erase(g_arrQueue.begin());
+
+        pthread_mutex_unlock(&g_hMutex);
+
+        string strOutFile = g_strOut + pSACD->init(nTrack, g_nSampleRate);
+        unsigned int nSize = 0x7fffffff;
+        unsigned char arrHeader[68];
+        unsigned char arrFormat[2] = {0xFE, 0xFF};
+        unsigned char arrSubtype[16] = {0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71};
+
+        memcpy (arrHeader, "RIFF", 4);
+        packageInt (arrHeader, 4, nSize - 8, 4);
+        memcpy (arrHeader + 8, "WAVE", 4);
+        memcpy (arrHeader + 12, "fmt ", 4);
+        packageInt (arrHeader, 16, 40, 4);
+        memcpy (arrHeader + 20, arrFormat, 2);
+        packageInt (arrHeader, 22, pSACD->m_nPcmOutChannels, 2);
+        packageInt (arrHeader, 24, g_nSampleRate, 4);
+        packageInt (arrHeader, 28, (g_nSampleRate * 24 * pSACD->m_nPcmOutChannels) / 8, 4);
+        packageInt (arrHeader, 32, pSACD->m_nPcmOutChannels * 3, 2);
+        packageInt (arrHeader, 34, 24, 2);
+        packageInt (arrHeader, 36, 22, 2);
+        packageInt (arrHeader, 38, 24, 2);
+        packageInt (arrHeader, 40, pSACD->m_nPcmOutChannelMap, 4);
+        memcpy (arrHeader + 44, arrSubtype, 16);
+        memcpy (arrHeader + 60, "data", 4);
+        packageInt (arrHeader, 64, nSize - 68, 4);
+        FILE * pFile = fopen(strOutFile.data(), "wb");
+        fwrite(arrHeader, 1, 68, pFile);
+
+        bool bDone = false;
+
+        while (!bDone || !pSACD->m_bTrackCompleted)
+        {
+            bDone = pSACD->decode(pFile);
+        }
+
+        nSize = ftell (pFile);
+        packageInt (arrHeader, 4, nSize - 8, 4);
+        packageInt (arrHeader, 64, nSize - 68, 4);
+        fseek (pFile, 0, SEEK_SET);
+        fwrite (arrHeader, 1, 68, pFile);
+        fclose(pFile);
+
+        if (g_bProgressLine)
+        {
+            printf("FILE\t%s\t%.2i\t%.2i\n", strOutFile.data(), nTrack + 1, pSACD->m_nTracks);
+        }
+    }
+
+    delete pSACD;
+
+    return 0;
+}
+
 int main(int argc, char* argv[])
 {
+    int nCPUs = sysconf(_SC_NPROCESSORS_ONLN);
+
+    if (nCPUs < 2)
+    {
+        nCPUs = thread::hardware_concurrency();
+    }
+
+    if (nCPUs > 2)
+    {
+        g_nCPUs = nCPUs;
+    }
+
     string strIn = "";
-    string strOut = "";
-    int nSampleRate = 96000;
     char strPath[PATH_MAX];
     int nOpt;
-    bool bProgressLine = false;
     bool bPrintHelp = false;
 
     const char strHelpText[] =
@@ -521,7 +532,7 @@ int main(int argc, char* argv[])
                 strIn = optarg;
                 break;
             case 'o':
-                strOut = optarg;
+                g_strOut = optarg;
                 break;
             case 'r':
             {
@@ -529,7 +540,7 @@ int main(int argc, char* argv[])
 
                 if (s == "88200" || s == "96000" || s == "176400" || s == "192000")
                 {
-                    nSampleRate = stoi(optarg);
+                    g_nSampleRate = stoi(optarg);
                 }
                 else
                 {
@@ -539,7 +550,7 @@ int main(int argc, char* argv[])
                 break;
             }
             case 'p':
-                bProgressLine = true;
+                g_bProgressLine = true;
                 break;
             default:
                 bPrintHelp = true;
@@ -549,7 +560,7 @@ int main(int argc, char* argv[])
 
     if (bPrintHelp || argc == 1 || strIn.empty())
     {
-        printf(bProgressLine ? "PANIC: Invalid command-line syntax\n" : strHelpText);
+        printf(g_bProgressLine ? "PANIC: Invalid command-line syntax\n" : strHelpText);
         return 0;
     }
 
@@ -563,64 +574,64 @@ int main(int argc, char* argv[])
 
     strIn = realpath(strIn.data(), strPath);
 
-    if (strOut.empty())
+    if (g_strOut.empty())
     {
-        strOut = strIn.substr(0, strIn.find_last_of("/") + 1);
+        g_strOut = strIn.substr(0, strIn.find_last_of("/") + 1);
     }
 
-    if (strOut.empty() || stat(strOut.c_str(), &tStat) == -1 || !S_ISDIR(tStat.st_mode))
+    if (g_strOut.empty() || stat(g_strOut.c_str(), &tStat) == -1 || !S_ISDIR(tStat.st_mode))
     {
         printf("PANIC: Output directory does not exist\n");
         return 0;
     }
 
-    strOut = realpath(strOut.data(), strPath);
+    g_strOut = realpath(g_strOut.data(), strPath);
 
-    if (strOut.compare(strOut.size() - 1, 1, "/") != 0)
+    if (g_strOut.compare(g_strOut.size() - 1, 1, "/") != 0)
     {
-        strOut += "/";
+        g_strOut += "/";
     }
 
-    input_sacd_t * pSacd = new input_sacd_t();
+    SACD * pSacd = new SACD();
     int nTracks = pSacd->open(strIn);
-    delete pSacd;
 
     if (!nTracks)
     {
         exit(1);
     }
 
-    tThreadArgs tArgs;
-    tArgs.strIn = strIn.c_str();
-    tArgs.strOut = strOut.c_str();
-    tArgs.nSampleRate = nSampleRate;
-    tArgs.bProgressLine = bProgressLine;
-    vector<tTrackArgs> arrTracks(nTracks);
-    pthread_t hProgressThread;
-
-    time_t now = time(0);
-
-    if (!bProgressLine)
+    if (!g_bProgressLine)
     {
         printf("\n\nsacd - Command-line SACD decoder version %s\n\n", APPVERSION);
     }
 
+    delete pSacd;
+
+    time_t nNow = time(0);
+    pthread_t hThreadProgress;
+    vector<SACD*> arrSACD(g_nCPUs);
+    vector<pthread_t> arrThreads(g_nCPUs);
+
     for (int i = 0; i < nTracks; i++)
     {
-        arrTracks[i].nTrack = i;
-        arrTracks[i].fProgress = 0.0;
-        arrTracks[i].tArgs = tArgs;
-
-        pthread_create(&arrTracks[i].hThread, NULL, fnThread, &arrTracks[i]);
-        pthread_detach(arrTracks[i].hThread);
+        g_arrQueue.push_back(i);
     }
 
-    pthread_create(&hProgressThread, NULL, fnProgress, &arrTracks);
-    pthread_join(hProgressThread, NULL);
+    for (int i = 0; i < g_nCPUs; i++)
+    {
+        arrSACD[i] = new SACD();
+        arrSACD[i]->open(strIn);
+        pthread_create(&arrThreads[i], NULL, fnDecoder, arrSACD[i]);
+        pthread_detach(arrThreads[i]);
+    }
 
-    int nSeconds = time(0) - now;
+    pthread_create(&hThreadProgress, NULL, fnProgress, &arrSACD);
+    pthread_join(hThreadProgress, NULL);
+    pthread_mutex_destroy(&g_hMutex);
 
-    if (bProgressLine)
+    int nSeconds = time(0) - nNow;
+
+    if (g_bProgressLine)
     {
         printf("FINISHED\t%d\n", nSeconds);
     }
@@ -631,5 +642,3 @@ int main(int argc, char* argv[])
 
     return 0;
 }
-
-//1040/72

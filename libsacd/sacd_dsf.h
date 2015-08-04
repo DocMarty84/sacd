@@ -73,10 +73,10 @@ public:
     int get_framerate();
     float getProgress();
     bool is_dst();
-    int open(sacd_media_t* p_file, uint32_t mode = 0);
+    int open(sacd_media_t* p_file);
     bool close();
     string set_track(uint32_t track_number, area_id_e area_id = AREA_BOTH, uint32_t offset = 0);
-    bool read_frame(uint8_t* frame_data, int* frame_size, frame_type_e* frame_type);
+    bool read_frame(uint8_t* frame_data, size_t* frame_size, frame_type_e* frame_type);
 };
 
 #endif
