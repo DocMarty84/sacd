@@ -391,7 +391,7 @@ void * fnProgress (void* threadargs)
             fProgress += (*arrSACD).at(i)->m_fProgress;
         }
 
-        fProgress = MAX(((((float)nTracks - (float)g_nCPUs - (float)g_arrQueue.size()) * 100.0) + fProgress) / (float)nTracks, 0);
+        fProgress = MAX(((((float)nTracks - (float)MIN(g_nCPUs, nTracks) - (float)g_arrQueue.size()) * 100.0) + fProgress) / (float)nTracks, 0);
 
         if (g_bProgressLine)
         {

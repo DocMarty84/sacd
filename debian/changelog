@@ -1,3 +1,9 @@
+sacd (15.08.14) trusty; urgency=medium
+
+  * Fixed progress hang when CPU count is greater than track count
+
+ -- Robert Tari <robert.tari@gmail.com>  Fri, 14 Aug 2015 12:12:53 +0200
+
 sacd (15.08.04) trusty; urgency=medium
 
   * Multi-threaded DST decoder
