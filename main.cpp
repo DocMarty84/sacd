@@ -92,30 +92,38 @@ private:
         bool bConvertCalled = m_pDsdPcmConverter->is_convert_called();
         int nPcmSamples = m_pDsdPcmConverter->convert(pDsdData, m_arrPcmBuf.data(), nDsdSize);
 
-        if (nDegibbs == 1)
+        if (nPcmSamples == -1 || m_nError)
         {
-            m_pDsdPcmConverter->degibbs(m_arrPcmBuf.data(), nPcmSamples, 1);
+            m_nError++;
         }
-        else if (!bConvertCalled)
+        else if (!m_nError)
         {
-            m_pDsdPcmConverter->degibbs(m_arrPcmBuf.data(), nPcmSamples, 0);
+            if (nDegibbs == 1)
+            {
+                m_pDsdPcmConverter->degibbs(m_arrPcmBuf.data(), nPcmSamples, 1);
+            }
+            else if (!bConvertCalled)
+            {
+                m_pDsdPcmConverter->degibbs(m_arrPcmBuf.data(), nPcmSamples, 0);
+            }
+
+            int nDst = m_arrPcmBuf.size() * 3;
+            unsigned char * pDst = new unsigned char[nDst];
+            float * pSrc = m_arrPcmBuf.data();
+
+            for(int i = 0; i != nDst; i += 3)
+            {
+                int nVal = lrintf ((*pSrc++) * 8388607.0) ;
+
+                pDst[i] = nVal;
+                pDst[i+1] = nVal >> 8;
+                pDst[i+2] = nVal >> 16;
+            }
+
+            fwrite(pDst, sizeof(unsigned char), nDst, pFile);
+
+            delete[] pDst;
         }
-
-        int nDst = m_arrPcmBuf.size() * 3;
-        unsigned char * pDst = new unsigned char[nDst];
-        float * pSrc = m_arrPcmBuf.data();
-
-        for(int i = 0; i != nDst; i += 3)
-        {
-            int nVal = lrintf ((*pSrc++) * 8388607.0) ;
-
-            pDst[i] = nVal;
-            pDst[i+1] = nVal >> 8;
-            pDst[i+2] = nVal >> 16;
-        }
-
-        fwrite(pDst, sizeof(unsigned char), nDst, pFile);
-        delete[] pDst;
 
         m_fProgress = m_pSacdReader->getProgress();
     }
@@ -127,6 +135,7 @@ public:
     bool m_bTrackCompleted;
     int m_nPcmOutChannels;
     unsigned int m_nPcmOutChannelMap;
+    int m_nError;
 
     SACD()
     {
@@ -136,6 +145,7 @@ public:
         m_pDstDecoder = nullptr;
         m_fProgress = 0;
         m_nTracks = 0;
+        m_nError = 0;
     }
 
     ~SACD()
@@ -467,6 +477,18 @@ void * fnDecoder (void* threadargs)
         fseek (pFile, 0, SEEK_SET);
         fwrite (arrHeader, 1, 68, pFile);
         fclose(pFile);
+
+        if(pSACD->m_nError > 2)
+        {
+            if (g_bProgressLine)
+            {
+                printf("WARNING%d bad DSD samples dropped from end of track %d\n", pSACD->m_nError, nTrack + 1);
+            }
+            else
+            {
+                printf("\n\nWARNING: %d bad DSD samples dropped from end of track %d.\n\n", pSACD->m_nError, nTrack + 1);
+            }
+        }
 
         if (g_bProgressLine)
         {

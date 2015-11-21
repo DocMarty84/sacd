@@ -357,6 +357,11 @@ int dsdpcm_converter_hq::convertDown(uint8_t* dsd_data, float* pcm_data, int dsd
 
 int dsdpcm_converter_hq::convertResample(uint8_t* dsd_data, float* pcm_data, int dsd_samples)
 {
+    if((dsd_samples % m_decimation) != 0)
+    {
+        return -1;
+    }
+
     int i, pcm_samples, ch, offset, dsd_offset, pcm_offset, j;
     double dsd_input[DSDPCM_MAX_CHANNELS][MAX_RESAMPLING_IN + 8], x[DSDPCM_MAX_CHANNELS][MAX_RESAMPLING_OUT];
     uint8_t dsd8bits;
