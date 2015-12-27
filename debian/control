@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Robert Tari <robert.tari@gmail.com>
 Build-Depends: debhelper (>= 9), g++-4.8
 Standards-Version: 3.9.6
-Homepage: https://tari.in/www/eng/software/sacd/
+Homepage: https://tari.in/www/software/sacd/
 
 Package: sacd
 Architecture: any
