@@ -1,5 +1,5 @@
 /*
-    Copyright 2015 Robert Tari <robert.tari@gmail.com>
+    Copyright 2015-2016 Robert Tari <robert.tari@gmail.com>
     Copyright 2012 Vladislav Goncharov <vl-g@yandex.ru>
     Copyright 2012 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
 

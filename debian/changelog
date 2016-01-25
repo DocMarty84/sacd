@@ -1,3 +1,10 @@
+sacd (16.01.25) trusty; urgency=medium
+
+  * Replace unsafe characters in output filename
+  * Format output filename depending on artist tag presence
+
+ -- Robert Tari <robert.tari@gmail.com>  Mon, 25 Jan 2016 20:29:19 +0100
+
 sacd (15.11.21) trusty; urgency=medium
 
   * Filter out invalid trailing DSD samples

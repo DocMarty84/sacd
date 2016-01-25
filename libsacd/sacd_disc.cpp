@@ -1,5 +1,5 @@
 /*
-    Copyright 2015 Robert Tari <robert.tari@gmail.com>
+    Copyright 2015-2016 Robert Tari <robert.tari@gmail.com>
     Copyright 2011-2012 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
 
     This file is part of SACD.
@@ -24,6 +24,19 @@
 #include "sacd_disc.h"
 
 using namespace std;
+
+static inline string stringReplace(string str, const string& from, const string& to)
+{
+    size_t nPos = 0;
+
+    while((nPos = str.find(from, nPos)) != string::npos)
+    {
+        str.replace(nPos, from.length(), to);
+        nPos += to.length();
+    }
+
+    return str;
+}
 
 static inline string charset_convert(char* str, size_t insize, uint8_t codepage_index)
 {
@@ -327,12 +340,24 @@ string sacd_disc_t::set_track(uint32_t track_number, area_id_e area_id, uint32_t
         m_packet_info_idx = 0;
         m_file->seek((uint64_t)m_track_current_lsn * (uint64_t)m_sector_size);
 
-        char * buf = (char*) calloc(2 + 2 + area->area_track_text[track_number].track_type_performer.size() + 3 + area->area_track_text[track_number].track_type_title.size() + 4 + 1, 1);
-        sprintf(buf, "%.2i. %s - %s.wav", track_number + 1, area->area_track_text[track_number].track_type_performer.data(), area->area_track_text[track_number].track_type_title.data());
+        char * buf;
+
+        if(area->area_track_text[track_number].track_type_performer.size())
+        {
+            buf = (char*) calloc(2 + 2 + area->area_track_text[track_number].track_type_performer.size() + 3 + area->area_track_text[track_number].track_type_title.size() + 4 + 1, 1);
+            sprintf(buf, "%.2i. %s - %s.wav", track_number + 1, area->area_track_text[track_number].track_type_performer.data(), area->area_track_text[track_number].track_type_title.data());
+        }
+        else
+        {
+            buf = (char*) calloc(2 + 2 + area->area_track_text[track_number].track_type_title.size() + 4 + 1, 1);
+            sprintf(buf, "%.2i. %s.wav", track_number + 1, area->area_track_text[track_number].track_type_title.data());
+        }
+
         string s = buf;
+        s = stringReplace(s, "/", "-");
         free(buf);
 
-        return s;
+        return stringReplace(s, "\\", "-");
     }
 
     m_track_area = AREA_BOTH;

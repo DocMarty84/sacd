@@ -1,5 +1,5 @@
 /*
-    Copyright 2015 Robert Tari <robert.tari@gmail.com>
+    Copyright 2015-2016 Robert Tari <robert.tari@gmail.com>
 
     This file is part of SACD.
 
@@ -17,5 +17,5 @@
     along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
-#define APPVERSION "15.11.21"
+#define APPVERSION "16.01.25"
 
