@@ -38,8 +38,14 @@
 #include "libdsd2pcm/dsdpcm_converter_hq.h"
 #include "libdstdec/dst_decoder_mt.h"
 
+struct TrackInfo
+{
+    int nTrack;
+    area_id_e nArea;
+};
+
 int g_nCPUs = 2;
-vector<int> g_arrQueue;
+vector<TrackInfo> g_arrQueue;
 pthread_mutex_t g_hMutex = PTHREAD_MUTEX_INITIALIZER;
 string g_strOut = "";
 int g_nSampleRate = 96000;
@@ -76,7 +82,6 @@ private:
 
     media_type_t m_tMediaType;
     sacd_media_t* m_pSacdMedia;
-    sacd_reader_t* m_pSacdReader;
     dst_decoder_t* m_pDstDecoder;
     vector<uint8_t> m_arrDstBuf;
     vector<uint8_t> m_arrDsdBuf;
@@ -136,6 +141,7 @@ public:
     int m_nPcmOutChannels;
     unsigned int m_nPcmOutChannelMap;
     int m_nError;
+    sacd_reader_t* m_pSacdReader;
 
     SACD()
     {
@@ -168,6 +174,7 @@ public:
         if (m_pDstDecoder)
         {
             dst_decoder_destroy_mt(m_pDstDecoder);
+            m_pDstDecoder = nullptr;
         }
     }
 
@@ -254,19 +261,20 @@ public:
         return m_nTracks;
     }
 
-    string init(uint32_t nSubsong, int g_nSampleRate)
+    string init(uint32_t nSubsong, int g_nSampleRate, area_id_e nArea)
     {
-        string strFileName = "";
-
-        if (m_pSacdReader->get_track_count(AREA_MULCH) != 0)
+        if (m_pDsdPcmConverter)
         {
-            strFileName = m_pSacdReader->set_track(nSubsong, AREA_MULCH, 0);
-        }
-        else
-        {
-            strFileName = m_pSacdReader->set_track(nSubsong, AREA_TWOCH, 0);
+            delete m_pDsdPcmConverter;
         }
 
+        if (m_pDstDecoder)
+        {
+            dst_decoder_destroy_mt(m_pDstDecoder);
+            m_pDstDecoder = nullptr;
+        }
+
+        string strFileName = m_pSacdReader->set_track(nSubsong, nArea, 0);
         m_nDsdSamplerate = m_pSacdReader->get_samplerate();
         m_nFramerate = m_pSacdReader->get_framerate();
         m_nPcmOutChannels = m_pSacdReader->get_channels();
@@ -275,6 +283,9 @@ public:
         {
             case 2:
                 m_nPcmOutChannelMap = 1<<0 | 1<<1;
+                break;
+            case 3:
+                m_nPcmOutChannelMap = 1<<0 | 1<<1 | 1<<2;
                 break;
             case 5:
                 m_nPcmOutChannelMap = 1<<0 | 1<<1 | 1<<2 | 1<<4 | 1<<5;
@@ -433,12 +444,12 @@ void * fnDecoder (void* threadargs)
     {
         pthread_mutex_lock(&g_hMutex);
 
-        int nTrack = g_arrQueue.front();
+        TrackInfo cTrackInfo = g_arrQueue.front();
         g_arrQueue.erase(g_arrQueue.begin());
 
         pthread_mutex_unlock(&g_hMutex);
 
-        string strOutFile = g_strOut + pSACD->init(nTrack, g_nSampleRate);
+        string strOutFile = g_strOut + pSACD->init(cTrackInfo.nTrack, g_nSampleRate, cTrackInfo.nArea);
         unsigned int nSize = 0x7fffffff;
         unsigned char arrHeader[68];
         unsigned char arrFormat[2] = {0xFE, 0xFF};
@@ -482,17 +493,17 @@ void * fnDecoder (void* threadargs)
         {
             if (g_bProgressLine)
             {
-                printf("WARNING%d bad DSD samples dropped from end of track %d\n", pSACD->m_nError, nTrack + 1);
+                printf("WARNING%d bad DSD samples dropped from end of track %d\n", pSACD->m_nError, cTrackInfo.nTrack + 1);
             }
             else
             {
-                printf("\n\nWARNING: %d bad DSD samples dropped from end of track %d.\n\n", pSACD->m_nError, nTrack + 1);
+                printf("\n\nWARNING: %d bad DSD samples dropped from end of track %d.\n\n", pSACD->m_nError, cTrackInfo.nTrack + 1);
             }
         }
 
         if (g_bProgressLine)
         {
-            printf("FILE\t%s\t%.2i\t%.2i\n", strOutFile.data(), nTrack + 1, pSACD->m_nTracks);
+            printf("FILE\t%s\t%.2i\t%.2i\n", strOutFile.data(), cTrackInfo.nTrack + 1, pSACD->m_nTracks);
         }
     }
 
@@ -615,9 +626,8 @@ int main(int argc, char* argv[])
     }
 
     SACD * pSacd = new SACD();
-    int nTracks = pSacd->open(strIn);
 
-    if (!nTracks)
+    if (!pSacd->open(strIn))
     {
         exit(1);
     }
@@ -627,17 +637,66 @@ int main(int argc, char* argv[])
         printf("\n\nsacd - Command-line SACD decoder version %s\n\n", APPVERSION);
     }
 
+    int nTwoch = pSacd->m_pSacdReader->get_track_count(AREA_TWOCH);
+    int nMulch = pSacd->m_pSacdReader->get_track_count(AREA_MULCH);
+    bool bWarn = false;
+    area_id_e nArea;
+
+    if (nMulch > 0 && nTwoch > nMulch)
+    {
+        nArea = AREA_BOTH;
+        bWarn = true;
+    }
+    else if (nTwoch > 0 && nMulch > nTwoch)
+    {
+        nArea = AREA_BOTH;
+        bWarn = true;
+    }
+    else if (nMulch != 0)
+    {
+        nArea = AREA_MULCH;
+    }
+    else
+    {
+        nArea = AREA_TWOCH;
+    }
+
+    if(nArea == AREA_MULCH || nArea == AREA_BOTH)
+    {
+        for (int i = 0; i < nMulch; i++)
+        {
+            TrackInfo cTrackInfo = {i, AREA_MULCH};
+            g_arrQueue.push_back(cTrackInfo);
+        }
+    }
+
+    if(nArea == AREA_TWOCH || nArea == AREA_BOTH)
+    {
+        for (int i = 0; i < nTwoch; i++)
+        {
+            TrackInfo cTrackInfo = {i, AREA_TWOCH};
+            g_arrQueue.push_back(cTrackInfo);
+        }
+    }
+
+    if(bWarn)
+    {
+        if (g_bProgressLine)
+        {
+            printf("WARNINGThe multichannel and stereo areas have a different track count: extracting both.\n");
+        }
+        else
+        {
+            printf("WARNING: The multichannel and stereo areas have a different track count: extracting both.\n\n");
+        }
+    }
+
     delete pSacd;
 
     time_t nNow = time(0);
     pthread_t hThreadProgress;
     vector<SACD*> arrSACD(g_nCPUs);
     vector<pthread_t> arrThreads(g_nCPUs);
-
-    for (int i = 0; i < nTracks; i++)
-    {
-        g_arrQueue.push_back(i);
-    }
 
     for (int i = 0; i < g_nCPUs; i++)
     {

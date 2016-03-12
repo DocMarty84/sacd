@@ -276,7 +276,17 @@ int sacd_disc_t::open(sacd_media_t* p_file)
         }
     }
 
-    return m_sb.area[0].area_toc->track_count;
+    int nTracks = 0;
+
+    for (int i = 0; i < m_sb.area_count; i++)
+    {
+        if(m_sb.area[i].area_toc->track_count != nTracks)
+        {
+            nTracks += m_sb.area[i].area_toc->track_count;
+        }
+    }
+
+    return nTracks;
 }
 
 bool sacd_disc_t::close()

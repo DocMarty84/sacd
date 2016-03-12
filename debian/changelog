@@ -1,3 +1,10 @@
+sacd (16.03.12) trusty; urgency=medium
+
+  * Added support for discs with mismatching track count in
+    stereo/multichannel areas
+
+ -- Robert Tari <robert.tari@gmail.com>  Sat, 12 Mar 2016 17:35:25 +0100
+
 sacd (16.01.25) trusty; urgency=medium
 
   * Replace unsafe characters in output filename
