@@ -45,6 +45,7 @@ struct TrackInfo
 };
 
 int g_nCPUs = 2;
+int g_nThreads = 2;
 vector<TrackInfo> g_arrQueue;
 pthread_mutex_t g_hMutex = PTHREAD_MUTEX_INITIALIZER;
 string g_strOut = "";
@@ -407,12 +408,12 @@ void * fnProgress (void* threadargs)
         float fProgress = 0;
         int nTracks = (*arrSACD).at(0)->m_nTracks;
 
-        for (int i = 0; i < g_nCPUs; i++)
+        for (int i = 0; i < g_nThreads; i++)
         {
             fProgress += (*arrSACD).at(i)->m_fProgress;
         }
 
-        fProgress = MAX(((((float)nTracks - (float)MIN(g_nCPUs, nTracks) - (float)g_arrQueue.size()) * 100.0) + fProgress) / (float)nTracks, 0);
+        fProgress = MAX(((((float)nTracks - (float)MIN(g_nThreads, nTracks) - (float)g_arrQueue.size()) * 100.0) + fProgress) / (float)nTracks, 0);
 
         if (g_bProgressLine)
         {
@@ -425,7 +426,7 @@ void * fnProgress (void* threadargs)
 
         fflush(stdout);
 
-        if (fProgress == 100)
+        if (fProgress > 99.9)
         {
             break;
         }
@@ -693,12 +694,14 @@ int main(int argc, char* argv[])
 
     delete pSacd;
 
+    g_nThreads = MIN(g_nCPUs, (int)g_arrQueue.size());
+
     time_t nNow = time(0);
     pthread_t hThreadProgress;
-    vector<SACD*> arrSACD(g_nCPUs);
-    vector<pthread_t> arrThreads(g_nCPUs);
+    vector<SACD*> arrSACD(g_nThreads);
+    vector<pthread_t> arrThreads(g_nThreads);
 
-    for (int i = 0; i < g_nCPUs; i++)
+    for (int i = 0; i < g_nThreads; i++)
     {
         arrSACD[i] = new SACD();
         arrSACD[i]->open(strIn);

@@ -1,3 +1,11 @@
+sacd (16.03.14) trusty; urgency=medium
+
+  * DSF header bug fix
+  * Set lower thread limit
+  * Updated progress calculations
+
+ -- Robert Tari <robert.tari@gmail.com>  Mon, 14 Mar 2016 21:30:35 +0100
+
 sacd (16.03.12) trusty; urgency=medium
 
   * Added support for discs with mismatching track count in

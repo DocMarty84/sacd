@@ -1,5 +1,5 @@
 /*
-    Copyright 2015 Robert Tari <robert.tari@gmail.com>
+    Copyright 2015-2016 Robert Tari <robert.tari@gmail.com>
     Copyright 2011-2012 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
 
     This file is part of SACD.
@@ -33,6 +33,7 @@
 class FmtDSFChunk : public Chunk
 {
 public:
+    uint32_t format_version;
     uint32_t format_id;
     uint32_t channel_type;
     uint32_t channel_count;
@@ -40,6 +41,7 @@ public:
     uint32_t bits_per_sample;
     uint64_t sample_count;
     uint32_t block_size;
+    uint32_t reserved;
 };
 
 #pragma pack()
