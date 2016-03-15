@@ -51,6 +51,7 @@ pthread_mutex_t g_hMutex = PTHREAD_MUTEX_INITIALIZER;
 string g_strOut = "";
 int g_nSampleRate = 96000;
 bool g_bProgressLine = false;
+bool g_bFinished = false;
 
 void packageInt(unsigned char * buf, int offset, int num, int bytes)
 {
@@ -426,7 +427,7 @@ void * fnProgress (void* threadargs)
 
         fflush(stdout);
 
-        if (fProgress > 99.9)
+        if (fProgress > 99.9 && g_bFinished)
         {
             break;
         }
@@ -508,7 +509,7 @@ void * fnDecoder (void* threadargs)
         }
     }
 
-    delete pSACD;
+    g_bFinished = true;
 
     return 0;
 }
@@ -712,6 +713,11 @@ int main(int argc, char* argv[])
     pthread_create(&hThreadProgress, NULL, fnProgress, &arrSACD);
     pthread_join(hThreadProgress, NULL);
     pthread_mutex_destroy(&g_hMutex);
+
+    for (int i = 0; i < g_nThreads; i++)
+    {
+        delete arrSACD[i];
+    }
 
     int nSeconds = time(0) - nNow;
 

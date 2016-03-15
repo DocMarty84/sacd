@@ -1,3 +1,9 @@
+sacd (16.03.15) trusty; urgency=medium
+
+  * Updated progress calculations
+
+ -- Robert Tari <robert.tari@gmail.com>  Tue, 15 Mar 2016 13:25:34 +0100
+
 sacd (16.03.14) trusty; urgency=medium
 
   * DSF header bug fix
