@@ -354,13 +354,13 @@ string sacd_disc_t::set_track(uint32_t track_number, area_id_e area_id, uint32_t
 
         if(area->area_track_text[track_number].track_type_performer.size())
         {
-            buf = (char*) calloc(2 + 2 + area->area_track_text[track_number].track_type_performer.size() + 3 + area->area_track_text[track_number].track_type_title.size() + 4 + 1, 1);
-            sprintf(buf, "%.2i. %s - %s.wav", track_number + 1, area->area_track_text[track_number].track_type_performer.data(), area->area_track_text[track_number].track_type_title.data());
+            buf = (char*) calloc(6 + 2 + 2 + area->area_track_text[track_number].track_type_performer.size() + 3 + area->area_track_text[track_number].track_type_title.size() + 4 + 1, 1);
+            sprintf(buf, "(%ich) %.2i. %s - %s.wav", m_channel_count, track_number + 1, area->area_track_text[track_number].track_type_performer.data(), area->area_track_text[track_number].track_type_title.data());
         }
         else
         {
-            buf = (char*) calloc(2 + 2 + area->area_track_text[track_number].track_type_title.size() + 4 + 1, 1);
-            sprintf(buf, "%.2i. %s.wav", track_number + 1, area->area_track_text[track_number].track_type_title.data());
+            buf = (char*) calloc(6 + 2 + 2 + area->area_track_text[track_number].track_type_title.size() + 4 + 1, 1);
+            sprintf(buf, "(%ich) %.2i. %s.wav", m_channel_count, track_number + 1, area->area_track_text[track_number].track_type_title.data());
         }
 
         string s = buf;

@@ -1,5 +1,11 @@
 sacd (16.03.18) trusty; urgency=medium
 
+  * Updated filenames to display channel count
+
+ -- Robert Tari <robert.tari@gmail.com>  Mon, 28 Mar 2016 22:31:06 +0200
+
+sacd (16.03.18) trusty; urgency=medium
+
   * Updated progress calculations
 
  -- Robert Tari <robert.tari@gmail.com>  Fri, 18 Mar 2016 14:49:57 +0100
