@@ -427,7 +427,7 @@ void * fnProgress (void* threadargs)
 
         fflush(stdout);
 
-        if (fProgress > 99.99 && g_bFinished)
+        if (fProgress > 99.999 && g_bFinished)
         {
             break;
         }
