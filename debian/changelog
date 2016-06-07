@@ -1,3 +1,9 @@
+sacd (16.06.07) xenial; urgency=medium
+
+  * Signal when each decoding thread finishes
+
+ -- Robert Tari <robert.tari@gmail.com>  Tue, 07 Jun 2016 17:39:12 +0200
+
 sacd (16.03.29) trusty; urgency=medium
 
   * Updated progress calculations

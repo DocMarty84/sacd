@@ -51,7 +51,7 @@ pthread_mutex_t g_hMutex = PTHREAD_MUTEX_INITIALIZER;
 string g_strOut = "";
 int g_nSampleRate = 96000;
 bool g_bProgressLine = false;
-bool g_bFinished = false;
+int g_nFinished = 0;
 
 void packageInt(unsigned char * buf, int offset, int num, int bytes)
 {
@@ -427,7 +427,7 @@ void * fnProgress (void* threadargs)
 
         fflush(stdout);
 
-        if (fProgress > 99.999 && g_bFinished)
+        if (g_nFinished == nTracks)
         {
             break;
         }
@@ -507,9 +507,9 @@ void * fnDecoder (void* threadargs)
         {
             printf("FILE\t%s\t%.2i\t%.2i\n", strOutFile.data(), cTrackInfo.nTrack + 1, pSACD->m_nTracks);
         }
-    }
 
-    g_bFinished = true;
+        g_nFinished++;
+    }
 
     return 0;
 }
