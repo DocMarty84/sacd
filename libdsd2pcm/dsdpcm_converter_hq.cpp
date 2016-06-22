@@ -27,7 +27,6 @@ dsdpcm_converter_hq::dsdpcm_converter_hq(): m_dither24(24)
 {
     unsigned int i, j;
 
-    m_convert_called = false;
     m_decimation = 0;
     m_upsampling = 0;
     m_use_resampler = false;
@@ -286,17 +285,7 @@ int dsdpcm_converter_hq::init(int channels, int dsd_samplerate, int pcm_samplera
         delete[] impulse;
     }
 
-    m_convert_called = false;
-
     return 0;
-}
-
-float dsdpcm_converter_hq::get_delay()
-{
-    if (!m_use_resampler)
-        return (m_dn[0] != NULL) ? (float)(m_dn[0]->getFirSize() / 2) / (float)m_decimation : 0;
-    else
-        return (m_resampler[0] != NULL) ? (float)(m_resampler[0]->getFirSize() / 2) / (float)m_decimation : 0;
 }
 
 int dsdpcm_converter_hq::convert(uint8_t* dsd_data, float* pcm_data, int dsd_samples)
@@ -349,8 +338,6 @@ int dsdpcm_converter_hq::convertDown(uint8_t* dsd_data, float* pcm_data, int dsd
 
     assert(dsd_offset == dsd_samples);
     assert(pcm_offset == pcm_samples * m_nChannels);
-
-    m_convert_called = true;
 
     return pcm_offset;
 }
@@ -418,43 +405,5 @@ int dsdpcm_converter_hq::convertResample(uint8_t* dsd_data, float* pcm_data, int
     assert(dsd_offset == dsd_samples);
     assert(pcm_offset == pcm_samples * m_nChannels);
 
-    m_convert_called = true;
-
     return pcm_offset;
-}
-
-void dsdpcm_converter_hq::degibbs(float* pcm_data, int pcm_samples, int side)
-{
-    float delay = get_delay();
-    int point = (int)ceil(delay);
-
-    if (2 * point > pcm_samples)
-    {
-        return;
-    }
-
-    // fadein/fadeout to compensate lack of pre/post filter ringing
-    for (int ch = 0; ch < m_nChannels; ch++)
-    {
-        switch (side)
-        {
-            case 0:
-
-                for (int i = point; i < 2 * point; i++)
-                {
-                    pcm_data[m_nChannels * i + ch] *= (float)(i - point) / (float)point;
-                }
-
-                break;
-
-            case 1:
-
-                for (int i = 0; i < point; i++)
-                {
-                    pcm_data[m_nChannels * i + ch] *= (float)(point - i) / (float)point;
-                }
-
-                break;
-        }
-    }
 }

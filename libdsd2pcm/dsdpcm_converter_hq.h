@@ -48,13 +48,9 @@ public:
     ~dsdpcm_converter_hq();
     int init(int channels, int dsd_samplerate, int pcm_samplerate);
     int convert(uint8_t* dsd_data, float* pcm_data, int dsd_samples);
-    float get_delay();
-    bool is_convert_called() { return m_convert_called; }
-    void degibbs(float* pcm_data, int pcm_samples, int side);
 
 private:
 
-    bool m_convert_called;
     int  m_decimation;
     int m_upsampling;
     bool m_use_resampler;

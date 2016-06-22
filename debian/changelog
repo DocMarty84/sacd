@@ -1,3 +1,9 @@
+sacd (16.06.23) xenial; urgency=medium
+
+  * de-Gibbs removed
+
+ -- Robert Tari <robert.tari@gmail.com>  Thu, 23 Jun 2016 00:50:52 +0200
+
 sacd (16.06.07) xenial; urgency=medium
 
   * Signal when each decoding thread finishes

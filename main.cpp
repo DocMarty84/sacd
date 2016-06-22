@@ -94,47 +94,6 @@ private:
     int m_nDsdSamplerate;
     int m_nFramerate;
 
-    void writeData(FILE * pFile, int nDegibbs, uint8_t* pDsdData, int nDsdSize)
-    {
-        bool bConvertCalled = m_pDsdPcmConverter->is_convert_called();
-        int nPcmSamples = m_pDsdPcmConverter->convert(pDsdData, m_arrPcmBuf.data(), nDsdSize);
-
-        if (nPcmSamples == -1 || m_nError)
-        {
-            m_nError++;
-        }
-        else if (!m_nError)
-        {
-            if (nDegibbs == 1)
-            {
-                m_pDsdPcmConverter->degibbs(m_arrPcmBuf.data(), nPcmSamples, 1);
-            }
-            else if (!bConvertCalled)
-            {
-                m_pDsdPcmConverter->degibbs(m_arrPcmBuf.data(), nPcmSamples, 0);
-            }
-
-            int nDst = m_arrPcmBuf.size() * 3;
-            unsigned char * pDst = new unsigned char[nDst];
-            float * pSrc = m_arrPcmBuf.data();
-
-            for(int i = 0; i != nDst; i += 3)
-            {
-                int nVal = lrintf ((*pSrc++) * 8388607.0) ;
-
-                pDst[i] = nVal;
-                pDst[i+1] = nVal >> 8;
-                pDst[i+2] = nVal >> 16;
-            }
-
-            fwrite(pDst, sizeof(unsigned char), nDst, pFile);
-
-            delete[] pDst;
-        }
-
-        m_fProgress = m_pSacdReader->getProgress();
-    }
-
 public:
 
     int m_nTracks;
@@ -362,7 +321,33 @@ public:
 
                     if (nDsdSize > 0)
                     {
-                        writeData(pFile, 0, pDsdData, nDsdSize);
+                        int nPcmSamples = m_pDsdPcmConverter->convert(pDsdData, m_arrPcmBuf.data(), nDsdSize);
+
+                        if (nPcmSamples == -1 || m_nError)
+                        {
+                            m_nError++;
+                        }
+                        else if (!m_nError)
+                        {
+                            int nDst = m_arrPcmBuf.size() * 3;
+                            unsigned char * pDst = new unsigned char[nDst];
+                            float * pSrc = m_arrPcmBuf.data();
+
+                            for(int i = 0; i != nDst; i += 3)
+                            {
+                                int nVal = lrintf ((*pSrc++) * 8388607.0) ;
+
+                                pDst[i] = nVal;
+                                pDst[i+1] = nVal >> 8;
+                                pDst[i+2] = nVal >> 16;
+                            }
+
+                            fwrite(pDst, sizeof(unsigned char), nDst, pFile);
+
+                            delete[] pDst;
+                        }
+
+                        m_fProgress = m_pSacdReader->getProgress();
 
                         return false;
                     }
@@ -374,26 +359,6 @@ public:
             }
         }
 
-        pDsdData = nullptr;
-        pDstData = nullptr;
-        nDstSize = 0;
-
-        if (m_pDstDecoder)
-        {
-            dst_decoder_decode_mt(m_pDstDecoder, pDstData, nDstSize, &pDsdData, &nDsdSize);
-        }
-
-        if (nDsdSize > 0)
-        {
-            writeData(pFile, 0, pDsdData, nDsdSize);
-
-            return false;
-        }
-
-        pDsdData = m_arrDsdBuf.data();
-        nDsdSize = m_nDsdBufSize;
-        memset(pDsdData, 0xAA, nDsdSize);
-        writeData(pFile, 1, pDsdData, nDsdSize);
         m_bTrackCompleted = true;
 
         return true;
