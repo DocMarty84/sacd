@@ -1,5 +1,5 @@
 /*
-    Copyright 2015 Robert Tari <robert.tari@gmail.com>
+    Copyright 2015-2016 Robert Tari <robert.tari@gmail.com>
     Copyright 2012 Vladislav Goncharov <vl-g@yandex.ru>
 
     This file is part of SACD.
@@ -31,7 +31,6 @@ FirHistory::FirHistory(unsigned int fir_size)
 
     if (m_fir_size > 0)
     {
-
         // init history buffer
         m_x = new double[m_fir_size * 2 + 10]; // leave space for FIR pad (8 SSE block align + 2 memory align)
         m_head = m_fir_size;
@@ -182,7 +181,6 @@ double FirFilter::fast_convolve(double *x)
     double y;
 
     // convolution
-
     __m128d xy1, xy2, xy3, xy4;
 
     xy1 = _mm_setzero_pd();
@@ -212,30 +210,6 @@ double FirFilter::fast_convolve(double *x)
 void FirFilter::reset(bool reset_to_1)
 {
     m_x.reset(reset_to_1);
-}
-
-// Nx downsampler
-DownsamplerNx::DownsamplerNx(unsigned int nX, const double *fir, unsigned int fir_len) : m_flt(fir, fir_len)
-{
-    m_xN = nX;
-}
-
-double DownsamplerNx::processSample(const double *x)
-{
-    double y;
-    unsigned int i;
-
-    y = m_flt.processSample(x[0]);  // dithering not needed
-
-    for (i = 1; i < m_xN; i++)
-        m_flt.pushSample(x[i]);
-
-    return y;
-}
-
-void DownsamplerNx::reset(bool reset_to_1)
-{
-    m_flt.reset(reset_to_1);
 }
 
 // ResamplerNxMx

@@ -1,5 +1,5 @@
 /*
-    Copyright 2015 Robert Tari <robert.tari@gmail.com>
+    Copyright 2015-2016 Robert Tari <robert.tari@gmail.com>
     Copyright 2012 Vladislav Goncharov <vl-g@yandex.ru>
 
     This file is part of SACD.
@@ -54,6 +54,7 @@ public:
     void pushSample(double x);
     double fast_convolve(double *x);
     const double *getFir() const { return m_fir; }
+    unsigned int getFirSize() const { return m_org_fir_size; }
 
 private:
     double *m_fir; // [m_fir_size], aligned
@@ -61,19 +62,6 @@ private:
     FirHistory m_x;
     unsigned int m_fir_size; // aligned
     unsigned int m_org_fir_size;
-};
-
-// Nx downsampler
-class DownsamplerNx
-{
-public:
-    DownsamplerNx(unsigned int nX, const double *fir, unsigned int fir_len);
-    double processSample(const double *x);
-    void reset(bool reset_to_1 = false);
-
-private:
-    FirFilter m_flt;
-    unsigned int m_xN;
 };
 
 // Nx/Mx resampler
@@ -84,6 +72,7 @@ public:
     ~ResamplerNxMx();
     void processSample(const double *x, unsigned int x_n, double *y, unsigned int *y_n);
     void reset(bool reset_to_1 = false);
+    unsigned int getFirSize() const { return m_fir_size; }
 
 private:
     unsigned int m_xN; // up^

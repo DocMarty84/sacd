@@ -1,3 +1,14 @@
+sacd (16.09.21) xenial; urgency=medium
+
+  * Multithreaded pcm converter
+  * Highest quality 88200*x decoder
+  * Improved de-clicking
+  * Reworked float->24bit logic
+  * Some rework in dsf reader
+  * Various minor code changes
+
+ -- Robert Tari <robert.tari@gmail.com>  Wed, 21 Sep 2016 02:33:30 +0200
+
 sacd (16.06.23) xenial; urgency=medium
 
   * de-Gibbs removed

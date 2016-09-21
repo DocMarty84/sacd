@@ -35,7 +35,8 @@
 #include "libsacd/sacd_dsdiff.h"
 #include "libsacd/sacd_dsf.h"
 #include "libsacd/version.h"
-#include "libdsd2pcm/dsdpcm_converter_hq.h"
+#include "libdsd2pcm/dsd_pcm_converter_hq.h"
+#include "libdsd2pcm/dsd_pcm_converter_engine.h"
 #include "libdstdec/dst_decoder_mt.h"
 
 struct TrackInfo
@@ -82,7 +83,6 @@ class SACD
 {
 private:
 
-    media_type_t m_tMediaType;
     sacd_media_t* m_pSacdMedia;
     dst_decoder_t* m_pDstDecoder;
     vector<uint8_t> m_arrDstBuf;
@@ -90,37 +90,95 @@ private:
     vector<float> m_arrPcmBuf;
     int m_nDsdBufSize;
     int m_nDstBufSize;
-    dsdpcm_converter_hq* m_pDsdPcmConverter;
+    dsdpcm_converter_hq* m_pDsdPcmConverter480;
+    DSDPCMConverterEngine* m_pDsdPcmConverter441;
     int m_nDsdSamplerate;
     int m_nFramerate;
+    int m_nPcmOutSamples;
+    int m_nPcmOutDelta;
 
-    void writeData(FILE * pFile, uint8_t* pDsdData, int nDsdSize)
+    void dsd2pcm(uint8_t* dsd_data, int dsd_samples, float* pcm_data)
     {
-        int nPcmSamples = m_pDsdPcmConverter->convert(pDsdData, m_arrPcmBuf.data(), nDsdSize);
 
-        if (nPcmSamples == -1 || m_nError)
+        if (m_pDsdPcmConverter480)
         {
-            m_nError++;
+            m_pDsdPcmConverter480->convert(dsd_data, dsd_samples, pcm_data);
         }
-        else if (!m_nError)
+        else if (m_pDsdPcmConverter441)
         {
-            int nDst = m_arrPcmBuf.size() * 3;
-            unsigned char * pDst = new unsigned char[nDst];
-            float * pSrc = m_arrPcmBuf.data();
-
-            for(int i = 0; i != nDst; i += 3)
-            {
-                int nVal = lrintf ((*pSrc++) * 8388607.0) ;
-
-                pDst[i] = nVal;
-                pDst[i+1] = nVal >> 8;
-                pDst[i+2] = nVal >> 16;
-            }
-
-            fwrite(pDst, sizeof(unsigned char), nDst, pFile);
-
-            delete[] pDst;
+            m_pDsdPcmConverter441->convert(dsd_data, dsd_samples, pcm_data);
         }
+    }
+
+    void writeData(FILE * pFile, int nOffset, int nSamples)
+    {
+        int nFramesIn = nSamples * m_nPcmOutChannels;
+        int nBytesOut = nFramesIn * 3;
+        char * pSrc = (char*)(m_arrPcmBuf.data() + nOffset * m_nPcmOutChannels);
+        char * pDst = new char[nBytesOut];
+        float fSample;
+        int32_t nVal;
+        int nFrame;
+        int nOut = 0;
+
+        for (nFrame = 0; nFrame < nFramesIn; nFrame++, pSrc += 4)
+        {
+            fSample = *(float*)(pSrc);
+            fSample = MIN(fSample, 1.0);
+            fSample = MAX(fSample, -1.0);
+            fSample *= 8388608.0;
+
+            /*const float DITHER_NOISE = rand() / (float)RAND_MAX - 0.5f;
+            const float SHAPED_BS[] = { 2.033f, -2.165f, 1.959f, -1.590f, 0.6149f };
+            float mTriangleState = 0;
+            int mPhase = 0;
+            float mBuffer[8];
+            memset(mBuffer, 0, sizeof(float) * 8);*/
+
+            // 1 RectangleDither
+            /*fSample = fSample - DITHER_NOISE;*/
+
+            // 2 TriangleDither
+            /*float r = DITHER_NOISE;
+            float result = fSample + r - mTriangleState;
+            mTriangleState = r;
+            fSample = result;*/
+
+            // 3 ShapedDither
+            /*// Generate triangular dither, +-1 LSB, flat psd
+            float r = DITHER_NOISE + DITHER_NOISE;
+
+            // test for NaN and do the best we can with it
+            if(fSample != fSample)
+               fSample = 0;
+
+            // Run FIR
+            float xe = fSample + mBuffer[mPhase] * SHAPED_BS[0]
+                + mBuffer[(mPhase - 1) & 7] * SHAPED_BS[1]
+                + mBuffer[(mPhase - 2) & 7] * SHAPED_BS[2]
+                + mBuffer[(mPhase - 3) & 7] * SHAPED_BS[3]
+                + mBuffer[(mPhase - 4) & 7] * SHAPED_BS[4];
+
+            // Accumulate FIR and triangular noise
+            float result = xe + r;
+
+            // Roll buffer and store last error
+            mPhase = (mPhase + 1) & 7;
+            mBuffer[mPhase] = xe - lrintf(result);
+
+            fSample = result;*/
+
+            nVal = lrintf(fSample);
+            nVal = MIN(nVal, 8388607);
+            nVal = MAX(nVal, -8388608);
+
+            pDst[nOut++] = nVal;
+            pDst[nOut++] = nVal >> 8;
+            pDst[nOut++] = nVal >> 16;
+        }
+
+        fwrite(pDst, 1, nBytesOut, pFile);
+        delete [] pDst;
 
         m_fProgress = m_pSacdReader->getProgress();
     }
@@ -131,7 +189,6 @@ public:
     float m_fProgress;
     int m_nPcmOutChannels;
     unsigned int m_nPcmOutChannelMap;
-    int m_nError;
     sacd_reader_t* m_pSacdReader;
     bool m_bTrackCompleted;
 
@@ -139,11 +196,13 @@ public:
     {
         m_pSacdMedia = nullptr;
         m_pSacdReader = nullptr;
-        m_pDsdPcmConverter = nullptr;
+        m_pDsdPcmConverter441 = nullptr;
+        m_pDsdPcmConverter480 = nullptr;
         m_pDstDecoder = nullptr;
         m_fProgress = 0;
         m_nTracks = 0;
-        m_nError = 0;
+        m_nPcmOutSamples = 0;
+        m_nPcmOutDelta = 0;
     }
 
     ~SACD()
@@ -158,41 +217,44 @@ public:
             delete m_pSacdMedia;
         }
 
-        if (m_pDsdPcmConverter)
+        if (m_pDsdPcmConverter441)
         {
-            delete m_pDsdPcmConverter;
+            delete m_pDsdPcmConverter441;
+        }
+        else if (m_pDsdPcmConverter480)
+        {
+            delete m_pDsdPcmConverter480;
         }
 
         if (m_pDstDecoder)
         {
-            dst_decoder_destroy_mt(m_pDstDecoder);
-            m_pDstDecoder = nullptr;
+            delete m_pDstDecoder;
         }
     }
 
     int open(string p_path)
     {
         string ext = toLower(p_path.substr(p_path.length()-3, 3));
-        m_tMediaType = UNK_TYPE;
+        media_type_t tMediaType = UNK_TYPE;
 
         if (ext == "iso")
         {
-            m_tMediaType = ISO_TYPE;
+            tMediaType = ISO_TYPE;
         }
         else if (ext == "dat")
         {
-            m_tMediaType = ISO_TYPE;
+            tMediaType = ISO_TYPE;
         }
         else if (ext == "dff")
         {
-            m_tMediaType = DSDIFF_TYPE;
+            tMediaType = DSDIFF_TYPE;
         }
         else if (ext == "dsf")
         {
-            m_tMediaType = DSF_TYPE;
+            tMediaType = DSF_TYPE;
         }
 
-        if (m_tMediaType == UNK_TYPE)
+        if (tMediaType == UNK_TYPE)
         {
             printf("PANIC: exception_io_unsupported_format\n");
             return 0;
@@ -206,7 +268,7 @@ public:
             return 0;
         }
 
-        switch (m_tMediaType)
+        switch (tMediaType)
         {
             case ISO_TYPE:
                 m_pSacdReader = new sacd_disc_t;
@@ -255,29 +317,42 @@ public:
 
     string init(uint32_t nSubsong, int g_nSampleRate, area_id_e nArea)
     {
-        if (m_pDsdPcmConverter)
+        if (m_pDsdPcmConverter441)
         {
-            delete m_pDsdPcmConverter;
+            delete m_pDsdPcmConverter441;
+            m_pDsdPcmConverter441 = nullptr;
+        }
+        else if (m_pDsdPcmConverter480)
+        {
+            delete m_pDsdPcmConverter480;
+            m_pDsdPcmConverter480 = nullptr;
         }
 
         if (m_pDstDecoder)
         {
-            dst_decoder_destroy_mt(m_pDstDecoder);
+            delete m_pDstDecoder;
             m_pDstDecoder = nullptr;
         }
 
         string strFileName = m_pSacdReader->set_track(nSubsong, nArea, 0);
         m_nDsdSamplerate = m_pSacdReader->get_samplerate();
         m_nFramerate = m_pSacdReader->get_framerate();
+        m_nPcmOutSamples = g_nSampleRate / m_nFramerate;
         m_nPcmOutChannels = m_pSacdReader->get_channels();
 
         switch (m_nPcmOutChannels)
         {
+            case 1:
+                m_nPcmOutChannelMap = 1<<2;
+                break;
             case 2:
                 m_nPcmOutChannelMap = 1<<0 | 1<<1;
                 break;
             case 3:
                 m_nPcmOutChannelMap = 1<<0 | 1<<1 | 1<<2;
+                break;
+            case 4:
+                m_nPcmOutChannelMap = 1<<0 | 1<<1 | 1<<4 | 1<<5;
                 break;
             case 5:
                 m_nPcmOutChannelMap = 1<<0 | 1<<1 | 1<<2 | 1<<4 | 1<<5;
@@ -293,12 +368,64 @@ public:
         m_nDstBufSize = m_nDsdBufSize = m_nDsdSamplerate / 8 / m_nFramerate * m_nPcmOutChannels;
         m_arrDsdBuf.resize(m_nDsdBufSize * g_nCPUs);
         m_arrDstBuf.resize(m_nDstBufSize * g_nCPUs);
-        m_arrPcmBuf.resize(m_nPcmOutChannels * g_nSampleRate / 75);
-        m_pDsdPcmConverter = new dsdpcm_converter_hq();
-        m_pDsdPcmConverter->init(m_nPcmOutChannels, m_nDsdSamplerate, g_nSampleRate);
+        m_arrPcmBuf.resize(m_nPcmOutChannels * m_nPcmOutSamples);
+
+        if (g_nSampleRate == 96000 or g_nSampleRate == 192000)
+        {
+            m_pDsdPcmConverter480 = new dsdpcm_converter_hq();
+            m_pDsdPcmConverter480->init(m_nPcmOutChannels, m_nDsdSamplerate, g_nSampleRate);
+        }
+        else
+        {
+            m_pDsdPcmConverter441 = new DSDPCMConverterEngine();
+            m_pDsdPcmConverter441->init(m_nPcmOutChannels, m_nFramerate, m_nDsdSamplerate, g_nSampleRate);
+        }
+
+        float fPcmOutDelay = 0.0f;
+
+        if (m_pDsdPcmConverter480)
+        {
+            fPcmOutDelay = m_pDsdPcmConverter480->get_delay();
+        }
+        else
+        {
+            fPcmOutDelay = m_pDsdPcmConverter441->get_delay();
+        }
+
+        m_nPcmOutDelta = (int)(fPcmOutDelay - 0.5f);//  + 0.5f originally
+
+        if (m_nPcmOutDelta > m_nPcmOutSamples - 1)
+        {
+            m_nPcmOutDelta = m_nPcmOutSamples - 1;
+        }
+
         m_bTrackCompleted = false;
 
         return strFileName;
+    }
+
+    void fixPcmStream(bool bIsEnd, float* pPcmData, int nPcmSamples)
+    {
+        if (!bIsEnd)
+        {
+            if (nPcmSamples > 1)
+            {
+                for (int ch = 0; ch < m_nPcmOutChannels; ch++)
+                {
+                    pPcmData[0 * m_nPcmOutChannels + ch] = pPcmData[1 * m_nPcmOutChannels + ch];
+                }
+            }
+        }
+        else
+        {
+            if (nPcmSamples > 1)
+            {
+                for (int ch = 0; ch < m_nPcmOutChannels; ch++)
+                {
+                    pPcmData[(nPcmSamples - 1) * m_nPcmOutChannels + ch] = pPcmData[(nPcmSamples - 2) * m_nPcmOutChannels + ch];
+                }
+            }
+        }
     }
 
     bool decode(FILE* pFile)
@@ -329,20 +456,22 @@ public:
                     if (nFrameType == FRAME_INVALID)
                     {
                         nDstSize = m_nDstBufSize;
-                        memset(pDstData, 0xAA, nDstSize);
+                        memset(pDstData, DSD_SILENCE_BYTE, nDstSize);
                     }
 
                     if (nFrameType == FRAME_DST)
                     {
                         if (!m_pDstDecoder)
                         {
-                            if (dst_decoder_create_mt(&m_pDstDecoder, g_nCPUs) != 0 || dst_decoder_init_mt(m_pDstDecoder, m_nPcmOutChannels, m_nDsdSamplerate, m_nFramerate) != 0)
+                            m_pDstDecoder = new dst_decoder_t(g_nCPUs);
+
+                            if (!m_pDstDecoder || m_pDstDecoder->init(m_nPcmOutChannels, m_nDsdSamplerate, m_nFramerate) != 0)
                             {
-                                return false;
+                                return true;
                             }
                         }
 
-                        dst_decoder_decode_mt(m_pDstDecoder, pDstData, nDstSize, &pDsdData, &nDsdSize);
+                        m_pDstDecoder->decode(pDstData, nDstSize, &pDsdData, &nDsdSize);
                     }
                     else
                     {
@@ -352,7 +481,22 @@ public:
 
                     if (nDsdSize > 0)
                     {
-                        writeData(pFile, pDsdData, nDsdSize);
+                        int nRemoveSamples = 0;
+
+                        if ((m_pDsdPcmConverter480 && !m_pDsdPcmConverter480->is_convert_called()) || (m_pDsdPcmConverter441 && !m_pDsdPcmConverter441->is_convert_called()))
+                        {
+                            nRemoveSamples = m_nPcmOutDelta;
+                        }
+
+                        dsd2pcm(pDsdData, nDsdSize, m_arrPcmBuf.data());
+
+                        if (nRemoveSamples > 0)
+                        {
+                            fixPcmStream(false, m_arrPcmBuf.data() + m_nPcmOutChannels * nRemoveSamples, m_nPcmOutSamples - nRemoveSamples);
+                        }
+
+                        writeData(pFile, nRemoveSamples, m_nPcmOutSamples - nRemoveSamples);
+
                         return false;
                     }
                 }
@@ -369,13 +513,22 @@ public:
 
         if (m_pDstDecoder)
         {
-            dst_decoder_decode_mt(m_pDstDecoder, pDstData, nDstSize, &pDsdData, &nDsdSize);
+            m_pDstDecoder->decode(pDstData, nDstSize, &pDsdData, &nDsdSize);
         }
 
         if (nDsdSize > 0)
         {
-            writeData(pFile, pDsdData, nDsdSize);
+            dsd2pcm(pDsdData, nDsdSize, m_arrPcmBuf.data());
+            writeData(pFile, 0, m_nPcmOutSamples);
+
             return false;
+        }
+
+        if (m_nPcmOutDelta > 0)
+        {
+            dsd2pcm(nullptr, 0, m_arrPcmBuf.data());
+            fixPcmStream(true, m_arrPcmBuf.data(), m_nPcmOutDelta);
+            writeData(pFile, 0, m_nPcmOutDelta);
         }
 
         m_bTrackCompleted = true;
@@ -474,18 +627,6 @@ void * fnDecoder (void* threadargs)
         fseek (pFile, 0, SEEK_SET);
         fwrite (arrHeader, 1, 68, pFile);
         fclose(pFile);
-
-        if(pSACD->m_nError > 2)
-        {
-            if (g_bProgressLine)
-            {
-                printf("WARNING%d bad DSD samples dropped from end of track %d\n", pSACD->m_nError, cTrackInfo.nTrack + 1);
-            }
-            else
-            {
-                printf("\n\nWARNING: %d bad DSD samples dropped from end of track %d.\n\n", pSACD->m_nError, cTrackInfo.nTrack + 1);
-            }
-        }
 
         if (g_bProgressLine)
         {

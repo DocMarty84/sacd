@@ -1,5 +1,5 @@
 /*
-    Copyright 2015 Robert Tari <robert.tari@gmail.com>
+    Copyright 2015-2016 Robert Tari <robert.tari@gmail.com>
     Copyright 2012 Vladislav Goncharov <vl-g@yandex.ru> (HQ DSD->PCM converter 88.2/96 kHz)
 
     This file is part of SACD.
@@ -23,7 +23,6 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#include <math.h>
 #include "upsampler.h"
 
 #define DSDxFs1 (44100 * 1)
@@ -35,9 +34,7 @@
 #define DSDxFs256 (44100 * 256)
 #define DSDxFs512 (44100 * 512)
 #define DSDPCM_MAX_CHANNELS 6
-#define DSDPCM_MAX_SAMPLES (DSDxFs128 / 75 / 8 * DSDPCM_MAX_CHANNELS)
 
-enum conv_mode_t {DSD64_88200, DSD64_176400, DSD64_352800, DSD128_88200, DSD128_176400, DSD128_352800, DSD64_96000, DSD128_96000, DSD64_192000, DSD128_192000, DSD256_88200, DSD256_96000, DSD256_176400, DSD256_192000, DSD512_88200, DSD512_96000, DSD512_176400, DSD512_192000};
 typedef uint8_t dsd_sample_t[DSDPCM_MAX_CHANNELS];
 
 class dsdpcm_converter_hq
@@ -47,28 +44,26 @@ public:
     dsdpcm_converter_hq();
     ~dsdpcm_converter_hq();
     int init(int channels, int dsd_samplerate, int pcm_samplerate);
-    int convert(uint8_t* dsd_data, float* pcm_data, int dsd_samples);
+    int convert(uint8_t* dsd_data, int dsd_samples, float* pcm_data);
+    float get_delay();
+    bool is_convert_called();
 
 private:
 
-    int  m_decimation;
+    int m_decimation;
     int m_upsampling;
-    bool m_use_resampler;
     int m_nChannels;
     int m_nDsdSamplerate;
     int m_nPcmSamplerate;
-
+    bool conv_called;
     static const int MAX_DECIMATION = 32 * 2; // 64x -> 88.2 (44.1 not supported, 128x not supported)
     static const int MAX_RESAMPLING_IN = 147 * 2; // 64x -> 96  (147 -> 5 for 64x -> 96, 128x not supported)
     static const int MAX_RESAMPLING_OUT = 5 * 2; // 147 -> 5 for 64x -> 96
-
-    DownsamplerNx *m_dn[DSDPCM_MAX_CHANNELS];
     ResamplerNxMx *m_resampler[DSDPCM_MAX_CHANNELS];
     Dither m_dither24;
-    double  m_bits_table[16][4];
-
-    int convertDown(uint8_t* dsd_data, float* pcm_data, int dsd_samples);
-    int convertResample(uint8_t* dsd_data, float* pcm_data, int dsd_samples);
+    double m_bits_table[16][4];
+    uint8_t swap_bits[256];
+    int convertResample(uint8_t* dsd_data, int dsd_samples, float* pcm_data);
 };
 
 #endif

@@ -22,43 +22,60 @@
 #define _DST_DECODER_H_INCLUDED
 
 #include <pthread.h>
-#include "types.h"
+#include "dst_decoder.h"
 
-enum slot_state_t {SLOT_EMPTY, SLOT_LOADED, SLOT_RUNNING, SLOT_READY, SLOT_TERMINATING};
+enum slot_state_t {SLOT_EMPTY, SLOT_LOADED, SLOT_RUNNING, SLOT_READY, SLOT_READY_WITH_ERROR, SLOT_TERMINATING};
 
-typedef struct _frame_slot_t
+class frame_slot_t
 {
-    volatile int state;
-    int initialized;
-    int frame_nr;
-    uint8_t* dsd_data;
-    int dsd_size;
-    uint8_t* dst_data;
-    int dst_size;
-    int channel_count;
-    int samplerate;
-    int framerate;
-    pthread_t hThread;
-    pthread_cond_t hEventGet;
-    pthread_cond_t hEventPut;
-    pthread_mutex_t hMutex;
-    DstDec D;
-} frame_slot_t;
+    public:
 
-typedef struct _dst_decoder_t
+        volatile int state;
+        int frame_nr;
+        uint8_t* dsd_data;
+        int dsd_size;
+        uint8_t* dst_data;
+        int dst_size;
+        int channel_count;
+        int samplerate;
+        int framerate;
+        pthread_t hThread;
+        pthread_cond_t hEventGet;
+        pthread_cond_t hEventPut;
+        pthread_mutex_t hMutex;
+        CDSTDecoder D;
+
+        frame_slot_t()
+        {
+            state = SLOT_EMPTY;
+            dsd_data = nullptr;
+            dsd_size = 0;
+            dst_data = nullptr;
+            dst_size = 0;
+            channel_count = 0;
+            samplerate = 0;
+            framerate = 0;
+            frame_nr = 0;
+        }
+};
+
+class dst_decoder_t
 {
     frame_slot_t* frame_slots;
-    int slot_nr;
     int thread_count;
     int channel_count;
     int samplerate;
     int framerate;
     uint32_t frame_nr;
-} dst_decoder_t;
 
-int dst_decoder_create_mt(dst_decoder_t** dst_decoder, int thread_count);
-int dst_decoder_destroy_mt(dst_decoder_t* dst_decoder);
-int dst_decoder_init_mt(dst_decoder_t* dst_decoder, int channel_count, int samplerate, int framerate);
-int dst_decoder_decode_mt(dst_decoder_t* dst_decoder, uint8_t* dst_data, size_t dst_size, uint8_t** dsd_data, size_t* dsd_size);
+public:
+
+    int slot_nr;
+
+    dst_decoder_t(int threads);
+    ~dst_decoder_t();
+    int init(int channel_count, int samplerate, int framerate);
+    int decode(uint8_t* dst_data, size_t dst_size, uint8_t** dsd_data, size_t* dsd_size);
+};
 
 #endif

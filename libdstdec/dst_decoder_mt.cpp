@@ -1,6 +1,6 @@
 /*
-    Copyright 2015 Robert Tari <robert.tari@gmail.com>
-    Copyright 2011-2013 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
+    Copyright 2015-2016 Robert Tari <robert.tari@gmail.com>
+    Copyright 2011-2015 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
 
     This file is part of SACD.
 
@@ -18,11 +18,9 @@
     along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
-#include <malloc.h>
-#include <memory.h>
-#include <stdio.h>
-#include "dst_decoder.h"
 #include "dst_decoder_mt.h"
+
+#define DSD_SILENCE_BYTE 0x69
 
 void* DSTDecoderThread(void* threadarg)
 {
@@ -39,6 +37,8 @@ void* DSTDecoderThread(void* threadarg)
 
         if (frame_slot->state == SLOT_TERMINATING)
         {
+            frame_slot->dsd_data = nullptr;
+            frame_slot->dst_size = 0;
             pthread_mutex_unlock(&frame_slot->hMutex);
             return 0;
         }
@@ -46,10 +46,21 @@ void* DSTDecoderThread(void* threadarg)
         frame_slot->state = SLOT_RUNNING;
         pthread_mutex_unlock(&frame_slot->hMutex);
 
-        Decode(&frame_slot->D, frame_slot->dst_data, frame_slot->dsd_data, frame_slot->frame_nr, &frame_slot->dst_size);
+        bool bError = false;
+
+        try
+        {
+            frame_slot->D.decode(frame_slot->dst_data, frame_slot->dst_size * 8, frame_slot->dsd_data);
+        }
+        catch (...)
+        {
+            bError = true;
+            frame_slot->D.close();
+            frame_slot->D.init(frame_slot->channel_count, frame_slot->samplerate / 44100);
+        }
 
         pthread_mutex_lock(&frame_slot->hMutex);
-        frame_slot->state = SLOT_READY;
+        frame_slot->state = bError ? SLOT_READY_WITH_ERROR : SLOT_READY;
         pthread_cond_signal(&frame_slot->hEventGet);
         pthread_mutex_unlock(&frame_slot->hMutex);
     }
@@ -57,90 +68,53 @@ void* DSTDecoderThread(void* threadarg)
     return 0;
 }
 
-int dst_decoder_create_mt(dst_decoder_t** dst_decoder, int thread_count)
+dst_decoder_t::dst_decoder_t(int threads)
 {
-    *dst_decoder = (dst_decoder_t*)calloc(1, sizeof(dst_decoder_t));
+    thread_count = threads;
 
-    if (*dst_decoder == NULL)
+    frame_slots = new frame_slot_t[thread_count];
+
+    if (!frame_slots)
     {
-        printf("PANIC: Could not create DST decoder object");
-        return -1;
+        thread_count = 0;
     }
 
-    (*dst_decoder)->frame_slots = (frame_slot_t*)calloc(thread_count, sizeof(frame_slot_t));
-
-    if ((*dst_decoder)->frame_slots == NULL)
-    {
-        *dst_decoder = NULL;
-        printf("PANIC: Could not create DST decoder slot array");
-        return -2;
-    }
-
-    (*dst_decoder)->thread_count  = thread_count;
-    (*dst_decoder)->channel_count = 0;
-    (*dst_decoder)->samplerate = 0;
-    (*dst_decoder)->slot_nr = 0;
-
-    return 0;
+    channel_count = 0;
+    samplerate = 0;
+    framerate = 0;
+    slot_nr = 0;
 }
 
-int dst_decoder_destroy_mt(dst_decoder_t* dst_decoder)
+dst_decoder_t::~dst_decoder_t()
 {
-    int i;
-
-    try
+    for (int i = 0; i < thread_count; i++)
     {
-        for (i = 0; i < dst_decoder->thread_count; i++)
-        {
-            uint8_t* dsd_data = 0;
-            size_t dsd_size = 0;
-            dst_decoder_decode_mt(dst_decoder, NULL, 0, &dsd_data, &dsd_size);
-        }
+        frame_slot_t* frame_slot = &frame_slots[i];
 
-        for (i = 0; i < dst_decoder->thread_count; i++)
-        {
-            frame_slot_t* frame_slot = &dst_decoder->frame_slots[i];
+        // Release worker (decoding) thread for exit
+        pthread_mutex_lock(&frame_slot->hMutex);
+        frame_slot->state = SLOT_TERMINATING;
+        frame_slot->D.close();
+        pthread_cond_signal(&frame_slot->hEventPut);
+        pthread_mutex_unlock(&frame_slot->hMutex);
 
-            if (frame_slot->initialized)
-            {
-                pthread_mutex_lock(&frame_slot->hMutex);
-                frame_slot->state = SLOT_TERMINATING;
-                pthread_cond_signal(&frame_slot->hEventPut);
-                pthread_mutex_unlock(&frame_slot->hMutex);
-                pthread_join(frame_slot->hThread, NULL);
-                pthread_cond_destroy(&frame_slot->hEventGet);
-                pthread_cond_destroy(&frame_slot->hEventPut);
-                pthread_mutex_destroy(&frame_slot->hMutex);
-
-                if (Close(&frame_slot->D) != 0)
-                {
-                    printf("PANIC: Could not close DST decoder slot");
-                }
-
-                frame_slot->initialized = 0;
-            }
-        }
-
-        free(dst_decoder->frame_slots);
-        free(dst_decoder);
-    }
-    catch (...)
-    {
-        printf("PANIC: Exception caught while destroying DST decoder");
+        // Wait until worker (decoding) thread exit
+        pthread_join(frame_slot->hThread, NULL);
+        pthread_cond_destroy(&frame_slot->hEventGet);
+        pthread_cond_destroy(&frame_slot->hEventPut);
+        pthread_mutex_destroy(&frame_slot->hMutex);
     }
 
-    return 0;
+    delete[] frame_slots;
 }
 
-int dst_decoder_init_mt(dst_decoder_t* dst_decoder, int channel_count, int samplerate, int framerate)
+int dst_decoder_t::init(int channel_count, int samplerate, int framerate)
 {
-    int i;
-
-    for (i = 0; i < dst_decoder->thread_count; i++)
+    for (int i = 0; i < thread_count; i++)
     {
-        frame_slot_t* frame_slot = &dst_decoder->frame_slots[i];
+        frame_slot_t* frame_slot = &frame_slots[i];
 
-        if (Init(&frame_slot->D, channel_count, (samplerate / 44100) / (framerate / 75)) == 0)
+        if (frame_slot->D.init(channel_count, (samplerate / 44100) / (framerate / 75)) == 0)
         {
             frame_slot->channel_count = channel_count;
             frame_slot->samplerate = samplerate;
@@ -152,32 +126,30 @@ int dst_decoder_init_mt(dst_decoder_t* dst_decoder, int channel_count, int sampl
         }
         else
         {
-            printf("PANIC: Could not initialize decoder slot");
             return -1;
         }
 
-        frame_slot->initialized = 1;
         pthread_create(&frame_slot->hThread, NULL, DSTDecoderThread, frame_slot);
     }
 
-    dst_decoder->channel_count = channel_count;
-    dst_decoder->samplerate = samplerate;
-    dst_decoder->framerate = framerate;
-    dst_decoder->frame_nr = 0;
+    this->channel_count = channel_count;
+    this->samplerate = samplerate;
+    this->framerate = framerate;
+    this->frame_nr = 0;
 
     return 0;
 }
 
-int dst_decoder_decode_mt(dst_decoder_t* dst_decoder, uint8_t* dst_data, size_t dst_size, uint8_t** dsd_data, size_t* dsd_size)
+int dst_decoder_t::decode(uint8_t* dst_data, size_t dst_size, uint8_t** dsd_data, size_t* dsd_size)
 {
     // Get current slot
-    frame_slot_t* frame_slot = &dst_decoder->frame_slots[dst_decoder->slot_nr];
+    frame_slot_t* frame_slot = &frame_slots[slot_nr];
 
     // Allocate encoded frame into the slot
     frame_slot->dsd_data = *dsd_data;
     frame_slot->dst_data = dst_data;
     frame_slot->dst_size = dst_size;
-    frame_slot->frame_nr = dst_decoder->frame_nr;
+    frame_slot->frame_nr = frame_nr;
 
     // Release worker (decoding) thread on the loaded slot
     if (dst_size > 0)
@@ -193,8 +165,8 @@ int dst_decoder_decode_mt(dst_decoder_t* dst_decoder, uint8_t* dst_data, size_t 
     }
 
     // Advance to the next slot
-    dst_decoder->slot_nr = (dst_decoder->slot_nr + 1) % dst_decoder->thread_count;
-    frame_slot = &dst_decoder->frame_slots[dst_decoder->slot_nr];
+    slot_nr = (slot_nr + 1) % thread_count;
+    frame_slot = &frame_slots[slot_nr];
 
     // Dump decoded frame
     if (frame_slot->state != SLOT_EMPTY)
@@ -213,15 +185,20 @@ int dst_decoder_decode_mt(dst_decoder_t* dst_decoder, uint8_t* dst_data, size_t 
     {
         case SLOT_READY:
             *dsd_data = frame_slot->dsd_data;
-            *dsd_size = (size_t)(dst_decoder->samplerate / 8 / dst_decoder->framerate * dst_decoder->channel_count);
+            *dsd_size = (size_t)(samplerate / 8 / framerate * channel_count);
+            break;
+        case SLOT_READY_WITH_ERROR:
+            *dsd_data = frame_slot->dsd_data;
+            *dsd_size = (size_t)(samplerate / 8 / framerate * channel_count);
+            memset(*dsd_data, DSD_SILENCE_BYTE, *dsd_size);
             break;
         default:
-            *dsd_data = NULL;
+            *dsd_data = nullptr;
             *dsd_size = 0;
             break;
     }
 
-    dst_decoder->frame_nr++;
+    frame_nr++;
 
     return 0;
 }

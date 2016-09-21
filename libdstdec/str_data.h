@@ -1,5 +1,4 @@
 /*
-
     MPEG-4 Audio RM Module
     Lossless coding of 1-bit oversampled audio - DST (Direct Stream Transfer)
 
@@ -61,43 +60,38 @@
 
     You should have received a copy of the GNU General Public License
     along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
-
 */
 
-#ifndef DSTDECODER_H
-#define DSTDECODER_H
+#ifndef STRDATA_H
+#define STRDATA_H
 
-#include "coded_table.h"
-#include "str_data.h"
+#include <stdio.h>
+#include "dst_defs.h"
 
-class CDSTDecoder
+class CStrData
 {
+    uint8_t DSTdata[MAX_CHANNELS * MAX_DSDBYTES_INFRAME];
+    int TotalBytes;
+    int ByteCounter;
+    int BitPosition;
+    uint8_t DataByte;
+
 public:
 
-    CFrameHeader FrameHdr; // Contains frame based header information
-    CCodedTableF StrFilter; // Contains FIR-coef. compression data
-    CCodedTableP StrPtable; // Contains Ptable-entry compression data input stream.
-    int P_one[2 * MAX_CHANNELS][AC_HISMAX]; // Probability table for arithmetic coder
-    ADataByte AData[MAX_DSDBYTES_INFRAME * MAX_CHANNELS]; // Contains the arithmetic coded bit stream of a complete frame
-    int ADataLen; // Number of code bits contained in AData[]
-    CStrData SD; // DST data stream
-
-    CDSTDecoder();
-    ~CDSTDecoder();
-    int init(int channels, int fs44);
-    int close();
-    int decode(uint8_t* DSTFrame, int frameSize, uint8_t* DSDFrame);
-    int unpack(uint8_t* DSTFrame, uint8_t* DSDFrame);
+    void getDSTDataPointer(uint8_t** pBuffer);
+    void resetReadingIndex();
+    void createBuffer(int size);
+    void deleteBuffer();
+    void fillBuffer(uint8_t* pBuf, int size);
+    void getChrUnsigned(int length, uint8_t& x);
+    void getIntUnsigned(int length, int& x);
+    void getIntSigned(int length, int& x);
+    void getShortSigned(int length, short& x);
+    int get_in_bitcount();
 
 private:
 
-    int16_t reverse7LSBs(int16_t c);
-    void fillTable4Bit(CSegment& S, uint8_t Table4Bit[MAX_CHANNELS][MAX_DSDBITS_INFRAME / 2]);
-    void LT_InitCoefTablesI(int16_t ICoefI[2 * MAX_CHANNELS][16][256]);
-    void LT_InitCoefTablesU(uint16_t ICoefU[2 * MAX_CHANNELS][16][256]);
-    void LT_InitStatus(uint8_t Status[MAX_CHANNELS][16]);
-    int16_t LT_RunFilterI(int16_t FilterTable[16][256], uint8_t ChannelStatus[16]);
-    int16_t LT_RunFilterU(uint16_t FilterTable[16][256], uint8_t ChannelStatus[16]);
+    int getbits(long& outword, int out_bitptr);
 };
 
 #endif

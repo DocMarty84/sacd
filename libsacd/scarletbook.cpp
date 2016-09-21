@@ -1,5 +1,5 @@
 /*
-    Copyright 2015 Robert Tari <robert.tari@gmail.com>
+    Copyright 2015-2016 Robert Tari <robert.tari@gmail.com>
 
     SACD Ripper - http://code.google.com/p/sacd-ripper/
     Copyright 2010-2011 by respective authors.

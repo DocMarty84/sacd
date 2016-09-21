@@ -1,7 +1,6 @@
 /*
-    HQ DSD->PCM converter 88.2/96 kHz
     Copyright (c) 2015-2016 Robert Tari <robert.tari@gmail.com>
-    Copyright (c) 2012 Vladislav Goncharov <vl-g@yandex.ru>
+    Copyright (c) 2011-2015 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
 
     This file is part of SACD.
 
@@ -19,23 +18,33 @@
     along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
-#ifndef _dither_h_
-#define _dither_h_
+#pragma once
 
-// inline dithering implementation
-class Dither
+#include <memory.h>
+#include <stdlib.h>
+
+class DSDPCMUtil
 {
+
 public:
 
-    Dither(unsigned int n_bits);
-    Dither& operator=(const Dither &obj);
-    double processSample(double x) { return (x + m_rand_max * (double)(fast_rand() - (RAND_MAX / 2)) / (double)(RAND_MAX / 2)); }
+    static void* mem_alloc(size_t size)
+    {
+        void* memory = aligned_alloc(MEM_ALIGN, size);
 
-protected:
+        if (memory)
+        {
+            memset(memory, 0, size);
+        }
 
-    double m_rand_max;
-    int m_holdrand;
-    int fast_rand() { return (((m_holdrand = m_holdrand * 214013L + 2531011L) >> 16) & 0x7fff); } // libc rand() is too slow
+        return memory;
+    }
+
+    static void mem_free(void* memory)
+    {
+        if (memory)
+        {
+            free(memory);
+        }
+    }
 };
-
-#endif

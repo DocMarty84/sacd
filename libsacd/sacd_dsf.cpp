@@ -1,6 +1,6 @@
 /*
-    Copyright 2015 Robert Tari <robert.tari@gmail.com>
-    Copyright 2011-2012 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
+    Copyright 2015-2016 Robert Tari <robert.tari@gmail.com>
+    Copyright 2011-2014 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
 
     This file is part of SACD.
 
@@ -43,7 +43,7 @@ sacd_dsf_t::~sacd_dsf_t()
 
 uint32_t sacd_dsf_t::get_track_count(area_id_e area_id)
 {
-    if ((area_id == AREA_TWOCH && m_channel_count == 2) || (area_id == AREA_MULCH && m_channel_count > 2) || area_id == AREA_BOTH)
+    if ((area_id == AREA_TWOCH && m_channel_count <= 2) || (area_id == AREA_MULCH && m_channel_count > 2) || area_id == AREA_BOTH)
     {
         return 1;
     }
@@ -138,7 +138,7 @@ int sacd_dsf_t::open(sacd_media_t* p_file)
             m_loudspeaker_config = 4;
             break;
         default:
-            return false;
+            m_loudspeaker_config = 65535;
             break;
     }
 
@@ -202,11 +202,13 @@ string sacd_dsf_t::set_track(uint32_t track_number, area_id_e area_id, uint32_t 
 
 bool sacd_dsf_t::read_frame(uint8_t* frame_data, size_t* frame_size, frame_type_e* frame_type)
 {
+    int samples_read = 0;
+
     for (int i = 0; i < (int)*frame_size / m_channel_count; i++)
     {
         if (m_block_offset * m_channel_count >= m_block_data_end)
         {
-            m_block_data_end = (int)MIN(m_data_end_offset - m_file->get_position(), m_block_data.size());
+                m_block_data_end = (int)MIN(m_data_end_offset - m_file->get_position(), m_block_data.size());
 
             if (m_block_data_end > 0)
             {
@@ -219,11 +221,7 @@ bool sacd_dsf_t::read_frame(uint8_t* frame_data, size_t* frame_size, frame_type_
             }
             else
             {
-                memset(&frame_data[i * m_channel_count], 0xAA, *frame_size - i * m_channel_count);
-                *frame_size = 0;
-                *frame_type = FRAME_INVALID;
-
-                return false;
+                break;
             }
         }
 
@@ -234,9 +232,11 @@ bool sacd_dsf_t::read_frame(uint8_t* frame_data, size_t* frame_size, frame_type_
         }
 
         m_block_offset++;
+        samples_read++;
     }
 
-    *frame_type = FRAME_DSD;
+    *frame_size = samples_read * m_channel_count;
+    *frame_type = samples_read > 0 ? FRAME_DSD : FRAME_INVALID;
 
-    return true;
+    return samples_read > 0;
 }

@@ -1,6 +1,6 @@
 /*
     Copyright 2015-2016 Robert Tari <robert.tari@gmail.com>
-    Copyright 2011-2012 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
+    Copyright 2011-2014 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
 
     This file is part of SACD.
 
@@ -68,7 +68,7 @@ class sacd_dsf_t : public sacd_reader_t
     uint8_t swap_bits[256];
 public:
     sacd_dsf_t();
-    virtual ~sacd_dsf_t();
+    ~sacd_dsf_t();
     uint32_t get_track_count(area_id_e area_id = AREA_BOTH);
     int get_channels();
     int get_samplerate();

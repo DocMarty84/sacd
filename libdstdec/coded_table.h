@@ -1,5 +1,4 @@
 /*
-
     MPEG-4 Audio RM Module
     Lossless coding of 1-bit oversampled audio - DST (Direct Stream Transfer)
 
@@ -61,43 +60,43 @@
 
     You should have received a copy of the GNU General Public License
     along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
-
 */
 
-#ifndef DSTDECODER_H
-#define DSTDECODER_H
+#ifndef CODEDTABLE_H
+#define CODEDTABLE_H
 
-#include "coded_table.h"
-#include "str_data.h"
+#include "dst_defs.h"
 
-class CDSTDecoder
+class CCodedTableBase
 {
+
 public:
 
-    CFrameHeader FrameHdr; // Contains frame based header information
-    CCodedTableF StrFilter; // Contains FIR-coef. compression data
-    CCodedTableP StrPtable; // Contains Ptable-entry compression data input stream.
-    int P_one[2 * MAX_CHANNELS][AC_HISMAX]; // Probability table for arithmetic coder
-    ADataByte AData[MAX_DSDBYTES_INFRAME * MAX_CHANNELS]; // Contains the arithmetic coded bit stream of a complete frame
-    int ADataLen; // Number of code bits contained in AData[]
-    CStrData SD; // DST data stream
+    int TableType; // FILTER or PTABLE: indicates contents
+    int StreamBits; // nr of bits all filters use in the stream
+    int CPredOrder[NROFFRICEMETHODS]; // Code_PredOrder[Method]
+    int CPredCoef[NROFPRICEMETHODS][MAXCPREDORDER]; // Code_PredCoef[Method][CoefNr]
+    int Coded[2 * MAX_CHANNELS]; // DST encode coefs/entries of Fir/PtabNr
+    int BestMethod[2 * MAX_CHANNELS]; // BestMethod[Fir/PtabNr]
+    int m[2 * MAX_CHANNELS][NROFFRICEMETHODS]; // m[Fir/PtabNr][Method]
+    int DataLenData[2 * MAX_CHANNELS]; // Fir/PtabDataLength[Fir/PtabNr]
 
-    CDSTDecoder();
-    ~CDSTDecoder();
-    int init(int channels, int fs44);
-    int close();
-    int decode(uint8_t* DSTFrame, int frameSize, uint8_t* DSDFrame);
-    int unpack(uint8_t* DSTFrame, uint8_t* DSDFrame);
+    void calcCCP();
+};
 
-private:
+class CCodedTable : public CCodedTableBase
+{
+    int Data[2 * MAX_CHANNELS][MAX((1 << SIZE_CODEDPREDORDER) * SIZE_PREDCOEF, AC_BITS * AC_HISMAX)]; // Fir/PtabData[Fir/PtabNr][Index]
+};
 
-    int16_t reverse7LSBs(int16_t c);
-    void fillTable4Bit(CSegment& S, uint8_t Table4Bit[MAX_CHANNELS][MAX_DSDBITS_INFRAME / 2]);
-    void LT_InitCoefTablesI(int16_t ICoefI[2 * MAX_CHANNELS][16][256]);
-    void LT_InitCoefTablesU(uint16_t ICoefU[2 * MAX_CHANNELS][16][256]);
-    void LT_InitStatus(uint8_t Status[MAX_CHANNELS][16]);
-    int16_t LT_RunFilterI(int16_t FilterTable[16][256], uint8_t ChannelStatus[16]);
-    int16_t LT_RunFilterU(uint16_t FilterTable[16][256], uint8_t ChannelStatus[16]);
+class CCodedTableF : public CCodedTableBase
+{
+    int Data[2 * MAX_CHANNELS][(1 << SIZE_CODEDPREDORDER) * SIZE_PREDCOEF]; // FirData[FirNr][Index]
+};
+
+class CCodedTableP : public CCodedTableBase
+{
+    int Data[2 * MAX_CHANNELS][AC_BITS * AC_HISMAX]; // PtabData[PtabNr][Index]
 };
 
 #endif
