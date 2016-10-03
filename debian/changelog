@@ -1,3 +1,9 @@
+sacd (16.10.03) xenial; urgency=medium
+
+  * Keep edited master chunks by default
+
+ -- Robert Tari <robert.tari@gmail.com>  Mon, 03 Oct 2016 23:14:52 +0200
+
 sacd (16.09.21) xenial; urgency=medium
 
   * Multithreaded pcm converter
