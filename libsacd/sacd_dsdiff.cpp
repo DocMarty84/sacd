@@ -1,6 +1,6 @@
 /*
     Copyright 2015-2016 Robert Tari <robert.tari@gmail.com>
-    Copyright 2011-2012 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
+    Copyright 2011-2016 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
 
     This file is part of SACD.
 
