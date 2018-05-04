@@ -1,3 +1,9 @@
+sacd (18.5.4) xenial; urgency=medium
+
+  * Fixed DSDIFF track length
+
+ -- Robert Tari <robert.tari@gmail.com>  Fri, 04 May 2018 02:44:24 +0200
+
 sacd (16.10.03) xenial; urgency=medium
 
   * Keep edited master chunks by default

@@ -1,6 +1,6 @@
 /*
-    Copyright 2015-2016 Robert Tari <robert.tari@gmail.com>
-    Copyright 2011-2016 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
+    Copyright 2015-2018 Robert Tari <robert.tari@gmail.com>
+    Copyright 2011-2018 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
 
     This file is part of SACD.
 
@@ -231,7 +231,7 @@ int sacd_dsdiff_t::open(sacd_media_t* p_file)
             m_file->skip(ck.get_size());
             subsong_t s;
             s.start_time = 0.0;
-            s.stop_time  = m_frame_count / m_framerate;
+            s.stop_time  = (double) m_frame_count / m_framerate;
             m_subsong.push_back(s);
         }
         else if (ck.has_id("DST "))

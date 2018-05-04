@@ -4,13 +4,13 @@ Upstream-Contact: Robert Tari <robert.tari@gmail.com>
 Source: https://code.launchpad.net/~robert-tari/sacd/trunk
 
 Files: *
-Copyright: 2015 Robert Tari <robert.tari@gmail.com>
+Copyright: 2015-2018 Robert Tari <robert.tari@gmail.com>
            2012 Vladislav Goncharov <vl-g@yandex.ru>
-           2012 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
+           2011-2018 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
 License: GPL-3.0+
 
 Files: debian/*
-Copyright: 2015 Robert Tari <robert.tari@gmail.com>
+Copyright: 2018 Robert Tari <robert.tari@gmail.com>
 License: GPL-3.0+
 
 License: GPL-3.0+
@@ -29,8 +29,3 @@ License: GPL-3.0+
  .
  On Debian systems, the complete text of the GNU General
  Public License version 3 can be found in "/usr/share/common-licenses/GPL-3".
-
-# Please also look if there are files or directories which have a
-# different copyright/license attached and list them here.
-# Please avoid to pick license terms that are more restrictive than the
-# packaged work, as it may make Debian's contributions unacceptable upstream.
