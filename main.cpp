@@ -1,5 +1,5 @@
 /*
-    Copyright 2015-2016 Robert Tari <robert.tari@gmail.com>
+    Copyright 2015-2018 Robert Tari <robert.tari@gmail.com>
     Copyright 2012 Vladislav Goncharov <vl-g@yandex.ru>
     Copyright 2011-2016 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
 
@@ -53,6 +53,7 @@ string g_strOut = "";
 int g_nSampleRate = 96000;
 bool g_bProgressLine = false;
 int g_nFinished = 0;
+area_id_e g_nArea = AREA_MULCH;
 
 void packageInt(unsigned char * buf, int offset, int num, int bytes)
 {
@@ -668,6 +669,8 @@ int main(int argc, char* argv[])
     "  -r, --rate           : The output samplerate.\n"
     "                         Valid rates are: 88200, 96000, 176400 and 192000.\n"
     "                         If you omit this, 96KHz will be used.\n"
+    "  -s, --stereo         : Only extract the 2-channel area if it exists.\n"
+    "                         If you omit this, the multichannel area will have priority.\n"
     "  -p, --progress       : Display progress to new lines. Use this if you intend\n"
     "                         to parse the output through a script. This option only\n"
     "                         lists either one progress percentage per line, or one\n"
@@ -679,12 +682,13 @@ int main(int argc, char* argv[])
         {"infile", required_argument, NULL, 'i' },
         {"outdir", required_argument, NULL, 'o' },
         {"rate", required_argument, NULL, 'r' },
+        {"stereo", no_argument, NULL, 's'},
         {"progress", no_argument, NULL, 'p'},
         {"help", no_argument, NULL, 'h' },
         { NULL, 0, NULL, 0 }
     };
 
-    while ((nOpt = getopt_long(argc, argv, "i:o:r:ph", tOptionsTable, NULL)) >= 0)
+    while ((nOpt = getopt_long(argc, argv, "i:o:r:sph", tOptionsTable, NULL)) >= 0)
     {
         switch (nOpt)
         {
@@ -709,6 +713,9 @@ int main(int argc, char* argv[])
                 }
                 break;
             }
+            case 's':
+                g_nArea = AREA_TWOCH;
+                break;
             case 'p':
                 g_bProgressLine = true;
                 break;
@@ -769,23 +776,27 @@ int main(int argc, char* argv[])
     bool bWarn = false;
     area_id_e nArea;
 
-    if (nMulch > 0 && nTwoch > nMulch)
+    if (nMulch > 0 && nTwoch > nMulch && g_nArea != AREA_TWOCH)
     {
         nArea = AREA_BOTH;
         bWarn = true;
     }
-    else if (nTwoch > 0 && nMulch > nTwoch)
+    else if (nTwoch > 0 && nMulch > nTwoch && g_nArea != AREA_TWOCH)
     {
         nArea = AREA_BOTH;
         bWarn = true;
     }
-    else if (nMulch != 0)
+    else if (nMulch > 0 && g_nArea != AREA_TWOCH)
     {
         nArea = AREA_MULCH;
     }
-    else
+    else if (nTwoch > 0)
     {
         nArea = AREA_TWOCH;
+    }
+    else
+    {
+        nArea = AREA_MULCH;
     }
 
     if(nArea == AREA_MULCH || nArea == AREA_BOTH)
