@@ -44,7 +44,7 @@
     using the code for non MPEG-4 Audio conforming products. This copyright notice
     must be included in all copies of derivative works.
 
-    Copyright © 2004-2016.
+    Copyright ï¿½ 2004-2016.
 
     This file is part of SACD.
 
@@ -86,17 +86,14 @@ public:
 
 class CCodedTable : public CCodedTableBase
 {
-    int Data[2 * MAX_CHANNELS][MAX((1 << SIZE_CODEDPREDORDER) * SIZE_PREDCOEF, AC_BITS * AC_HISMAX)]; // Fir/PtabData[Fir/PtabNr][Index]
 };
 
 class CCodedTableF : public CCodedTableBase
 {
-    int Data[2 * MAX_CHANNELS][(1 << SIZE_CODEDPREDORDER) * SIZE_PREDCOEF]; // FirData[FirNr][Index]
 };
 
 class CCodedTableP : public CCodedTableBase
 {
-    int Data[2 * MAX_CHANNELS][AC_BITS * AC_HISMAX]; // PtabData[PtabNr][Index]
 };
 
 #endif

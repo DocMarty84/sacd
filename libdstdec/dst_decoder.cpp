@@ -45,7 +45,7 @@
     using the code for non MPEG-4 Audio conforming products. This copyright notice
     must be included in all copies of derivative works.
 
-    Copyright © 2004-2016.
+    Copyright ï¿½ 2004-2016.
 
     This file is part of SACD.
 

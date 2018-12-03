@@ -22,6 +22,7 @@
 
 #include <memory.h>
 #include <stdlib.h>
+#include <malloc/malloc.h>
 
 class DSDPCMUtil
 {
@@ -30,7 +31,8 @@ public:
 
     static void* mem_alloc(size_t size)
     {
-        void* memory = aligned_alloc(MEM_ALIGN, size);
+        void* memory;
+        posix_memalign(&memory, MEM_ALIGN, size);
 
         if (memory)
         {

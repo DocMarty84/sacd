@@ -29,7 +29,6 @@
 #include <getopt.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include <linux/limits.h>
 #include "libsacd/sacd_reader.h"
 #include "libsacd/sacd_disc.h"
 #include "libsacd/sacd_dsdiff.h"

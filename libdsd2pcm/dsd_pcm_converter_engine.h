@@ -71,7 +71,6 @@ private:
     int dsd_samplerate;
     int pcm_samplerate;
     float conv_delay;
-    bool conv_fp64;
     bool conv_called;
     DSDPCMFilterSetup fltSetup_fp64;
     DSDPCMConverterSlot* convSlots_fp64;

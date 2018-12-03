@@ -60,22 +60,6 @@ static inline string charset_convert(char* str, size_t insize, uint8_t codepage_
     return s;
 }
 
-static inline int get_channel_count(audio_frame_info_t* frame_info)
-{
-    if (frame_info->channel_bit_2 == 1 && frame_info->channel_bit_3 == 0)
-    {
-        return 6;
-    }
-    else if (frame_info->channel_bit_2 == 0 && frame_info->channel_bit_3 == 1)
-    {
-        return 5;
-    }
-    else
-    {
-        return 2;
-    }
-}
-
 bool sacd_disc_t::g_is_sacd(const char* p_path)
 {
     try

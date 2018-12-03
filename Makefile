@@ -1,18 +1,13 @@
-ARCH = $(shell getconf LONG_BIT)
-
 CXX = g++
 
-CXXFLAGS_32 = -msse2
-CXXFLAGS_64 =
-CXXFLAGS = $(CXXFLAGS_$(ARCH)) -std=c++11 -Wall -O3
-#CXXFLAGS += -g -ggdb3
+CXXFLAGS = -std=c++11 -Wall
 
 VPATH = libdstdec:libdsd2pcm:libsacd
 
 INCLUDE_DIRS = libdstdec libdsd2pcm libsacd
-CPPFLAGS = $(foreach includedir,$(INCLUDE_DIRS),-I$(includedir))
+CPPFLAGS = $(foreach includedir,$(INCLUDE_DIRS),-I$(includedir)) -Ofast -flto
 
-LIBRARIES = rt pthread
+LIBRARIES = iconv pthread
 LIBRARY_DIRS = libdstdec libdsd2pcm libsacd
 LDFLAGS = $(foreach librarydir,$(LIBRARY_DIRS),-L$(librarydir))
 LDFLAGS += $(foreach library,$(LIBRARIES),-l$(library))
