@@ -20,6 +20,8 @@
 
 #pragma once
 
+#include "dsd_pcm_util.h"
+
 class PCMPCMFir
 {
     double* fir_coefs;

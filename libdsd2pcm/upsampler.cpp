@@ -40,7 +40,7 @@ FirHistory::FirHistory(unsigned int fir_size)
     }
     else
     {
-        m_x = NULL;
+        m_x = nullptr;
         m_head = 0;
     }
 }
@@ -67,7 +67,7 @@ FirHistory& FirHistory::operator=(const FirHistory &obj)
     }
     else
     {
-        m_x = NULL;
+        m_x = nullptr;
         m_head = 0;
     }
 
@@ -129,8 +129,8 @@ FirFilter::FirFilter(const double *fir, unsigned int fir_size, bool no_history) 
 
 FirFilter::FirFilter() : m_x(0)
 {
-    m_fir = NULL;
-    m_fir_alloc = NULL;
+    m_fir = nullptr;
+    m_fir_alloc = nullptr;
     m_fir_size = 0;
 }
 

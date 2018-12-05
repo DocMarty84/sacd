@@ -23,6 +23,7 @@
 #include <memory.h>
 #include <stdlib.h>
 #include <malloc/malloc.h>
+#include "dsd_pcm_constants.h"
 
 class DSDPCMUtil
 {

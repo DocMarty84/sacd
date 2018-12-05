@@ -99,7 +99,7 @@ dst_decoder_t::~dst_decoder_t()
         pthread_mutex_unlock(&frame_slot->hMutex);
 
         // Wait until worker (decoding) thread exit
-        pthread_join(frame_slot->hThread, NULL);
+        pthread_join(frame_slot->hThread, nullptr);
         pthread_cond_destroy(&frame_slot->hEventGet);
         pthread_cond_destroy(&frame_slot->hEventPut);
         pthread_mutex_destroy(&frame_slot->hMutex);
@@ -120,16 +120,16 @@ int dst_decoder_t::init(int channel_count, int samplerate, int framerate)
             frame_slot->samplerate = samplerate;
             frame_slot->framerate = framerate;
             frame_slot->dsd_size = (size_t)(samplerate / 8 / framerate * channel_count);
-            pthread_mutex_init(&frame_slot->hMutex, NULL);
-            pthread_cond_init(&frame_slot->hEventGet, NULL);
-            pthread_cond_init(&frame_slot->hEventPut, NULL);
+            pthread_mutex_init(&frame_slot->hMutex, nullptr);
+            pthread_cond_init(&frame_slot->hEventGet, nullptr);
+            pthread_cond_init(&frame_slot->hEventPut, nullptr);
         }
         else
         {
             return -1;
         }
 
-        pthread_create(&frame_slot->hThread, NULL, DSTDecoderThread, frame_slot);
+        pthread_create(&frame_slot->hThread, nullptr, DSTDecoderThread, frame_slot);
     }
 
     this->channel_count = channel_count;

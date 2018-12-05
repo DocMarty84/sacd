@@ -53,8 +53,6 @@ private:
     int m_decimation;
     int m_upsampling;
     int m_nChannels;
-    int m_nDsdSamplerate;
-    int m_nPcmSamplerate;
     bool conv_called;
     static const int MAX_DECIMATION = 32 * 2; // 64x -> 88.2 (44.1 not supported, 128x not supported)
     static const int MAX_RESAMPLING_IN = 147 * 2; // 64x -> 96  (147 -> 5 for 64x -> 96, 128x not supported)

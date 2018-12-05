@@ -34,8 +34,8 @@
 #include "libsacd/sacd_dsdiff.h"
 #include "libsacd/sacd_dsf.h"
 #include "libsacd/version.h"
+#include "libdsd2pcm/dsd_pcm_constants.h"
 #include "libdsd2pcm/dsd_pcm_converter_hq.h"
-#include "libdsd2pcm/dsd_pcm_converter_engine.h"
 #include "libdstdec/dst_decoder_mt.h"
 
 struct TrackInfo
@@ -50,9 +50,7 @@ vector<TrackInfo> g_arrQueue;
 pthread_mutex_t g_hMutex = PTHREAD_MUTEX_INITIALIZER;
 string g_strOut = "";
 int g_nSampleRate = 96000;
-bool g_bProgressLine = false;
 int g_nFinished = 0;
-area_id_e g_nArea = AREA_MULCH;
 
 void packageInt(unsigned char * buf, int offset, int num, int bytes)
 {
@@ -91,7 +89,6 @@ private:
     int m_nDsdBufSize;
     int m_nDstBufSize;
     dsdpcm_converter_hq* m_pDsdPcmConverter480;
-    DSDPCMConverterEngine* m_pDsdPcmConverter441;
     int m_nDsdSamplerate;
     int m_nFramerate;
     int m_nPcmOutSamples;
@@ -99,15 +96,7 @@ private:
 
     void dsd2pcm(uint8_t* dsd_data, int dsd_samples, float* pcm_data)
     {
-
-        if (m_pDsdPcmConverter480)
-        {
-            m_pDsdPcmConverter480->convert(dsd_data, dsd_samples, pcm_data);
-        }
-        else if (m_pDsdPcmConverter441)
-        {
-            m_pDsdPcmConverter441->convert(dsd_data, dsd_samples, pcm_data);
-        }
+        m_pDsdPcmConverter480->convert(dsd_data, dsd_samples, pcm_data);
     }
 
     void writeData(FILE * pFile, int nOffset, int nSamples)
@@ -196,7 +185,6 @@ public:
     {
         m_pSacdMedia = nullptr;
         m_pSacdReader = nullptr;
-        m_pDsdPcmConverter441 = nullptr;
         m_pDsdPcmConverter480 = nullptr;
         m_pDstDecoder = nullptr;
         m_fProgress = 0;
@@ -217,11 +205,7 @@ public:
             delete m_pSacdMedia;
         }
 
-        if (m_pDsdPcmConverter441)
-        {
-            delete m_pDsdPcmConverter441;
-        }
-        else if (m_pDsdPcmConverter480)
+        if (m_pDsdPcmConverter480)
         {
             delete m_pDsdPcmConverter480;
         }
@@ -317,12 +301,7 @@ public:
 
     string init(uint32_t nSubsong, int g_nSampleRate, area_id_e nArea)
     {
-        if (m_pDsdPcmConverter441)
-        {
-            delete m_pDsdPcmConverter441;
-            m_pDsdPcmConverter441 = nullptr;
-        }
-        else if (m_pDsdPcmConverter480)
+        if (m_pDsdPcmConverter480)
         {
             delete m_pDsdPcmConverter480;
             m_pDsdPcmConverter480 = nullptr;
@@ -369,28 +348,10 @@ public:
         m_arrDsdBuf.resize(m_nDsdBufSize * g_nCPUs);
         m_arrDstBuf.resize(m_nDstBufSize * g_nCPUs);
         m_arrPcmBuf.resize(m_nPcmOutChannels * m_nPcmOutSamples);
+        m_pDsdPcmConverter480 = new dsdpcm_converter_hq();
+        m_pDsdPcmConverter480->init(m_nPcmOutChannels, m_nDsdSamplerate, g_nSampleRate);
 
-        if (g_nSampleRate == 96000 or g_nSampleRate == 192000)
-        {
-            m_pDsdPcmConverter480 = new dsdpcm_converter_hq();
-            m_pDsdPcmConverter480->init(m_nPcmOutChannels, m_nDsdSamplerate, g_nSampleRate);
-        }
-        else
-        {
-            m_pDsdPcmConverter441 = new DSDPCMConverterEngine();
-            m_pDsdPcmConverter441->init(m_nPcmOutChannels, m_nFramerate, m_nDsdSamplerate, g_nSampleRate);
-        }
-
-        float fPcmOutDelay = 0.0f;
-
-        if (m_pDsdPcmConverter480)
-        {
-            fPcmOutDelay = m_pDsdPcmConverter480->get_delay();
-        }
-        else
-        {
-            fPcmOutDelay = m_pDsdPcmConverter441->get_delay();
-        }
+        float fPcmOutDelay = m_pDsdPcmConverter480->get_delay();
 
         m_nPcmOutDelta = (int)(fPcmOutDelay - 0.5f);//  + 0.5f originally
 
@@ -483,7 +444,7 @@ public:
                     {
                         int nRemoveSamples = 0;
 
-                        if ((m_pDsdPcmConverter480 && !m_pDsdPcmConverter480->is_convert_called()) || (m_pDsdPcmConverter441 && !m_pDsdPcmConverter441->is_convert_called()))
+                        if ((m_pDsdPcmConverter480 && !m_pDsdPcmConverter480->is_convert_called()))
                         {
                             nRemoveSamples = m_nPcmOutDelta;
                         }
@@ -553,15 +514,6 @@ void * fnProgress (void* threadargs)
 
         fProgress = MAX(((((float)nTracks - (float)MIN(g_nThreads, nTracks) - (float)g_arrQueue.size()) * 100.0) + fProgress) / (float)nTracks, 0);
 
-        if (g_bProgressLine)
-        {
-            printf("PROGRESS\t%.2f\n", fProgress);
-        }
-        else
-        {
-            printf("\r%.2f%%", fProgress);
-        }
-
         fflush(stdout);
 
         if (g_nFinished == nTracks)
@@ -590,29 +542,24 @@ void * fnDecoder (void* threadargs)
 
         string strOutFile = g_strOut + pSACD->init(cTrackInfo.nTrack, g_nSampleRate, cTrackInfo.nArea);
         unsigned int nSize = 0x7fffffff;
-        unsigned char arrHeader[68];
-        unsigned char arrFormat[2] = {0xFE, 0xFF};
-        unsigned char arrSubtype[16] = {0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71};
+        unsigned char arrHeader[44];
+        unsigned char arrFormat[2] = {0x01, 0x00};
 
         memcpy (arrHeader, "RIFF", 4);
         packageInt (arrHeader, 4, nSize - 8, 4);
         memcpy (arrHeader + 8, "WAVE", 4);
         memcpy (arrHeader + 12, "fmt ", 4);
-        packageInt (arrHeader, 16, 40, 4);
+        packageInt (arrHeader, 16, 16, 4);
         memcpy (arrHeader + 20, arrFormat, 2);
         packageInt (arrHeader, 22, pSACD->m_nPcmOutChannels, 2);
         packageInt (arrHeader, 24, g_nSampleRate, 4);
         packageInt (arrHeader, 28, (g_nSampleRate * 24 * pSACD->m_nPcmOutChannels) / 8, 4);
         packageInt (arrHeader, 32, pSACD->m_nPcmOutChannels * 3, 2);
         packageInt (arrHeader, 34, 24, 2);
-        packageInt (arrHeader, 36, 22, 2);
-        packageInt (arrHeader, 38, 24, 2);
-        packageInt (arrHeader, 40, pSACD->m_nPcmOutChannelMap, 4);
-        memcpy (arrHeader + 44, arrSubtype, 16);
-        memcpy (arrHeader + 60, "data", 4);
-        packageInt (arrHeader, 64, nSize - 68, 4);
+        memcpy (arrHeader + 36, "data", 4);
+        packageInt (arrHeader, 40, nSize - 44, 4);
         FILE * pFile = fopen(strOutFile.data(), "wb");
-        fwrite(arrHeader, 1, 68, pFile);
+        fwrite(arrHeader, 1, 44, pFile);
 
         bool bDone = false;
 
@@ -623,15 +570,12 @@ void * fnDecoder (void* threadargs)
 
         nSize = ftell (pFile);
         packageInt (arrHeader, 4, nSize - 8, 4);
-        packageInt (arrHeader, 64, nSize - 68, 4);
+        packageInt (arrHeader, 40, nSize - 44, 4);
         fseek (pFile, 0, SEEK_SET);
-        fwrite (arrHeader, 1, 68, pFile);
+        fwrite (arrHeader, 1, 44, pFile);
         fclose(pFile);
 
-        if (g_bProgressLine)
-        {
-            printf("FILE\t%s\t%.2i\t%.2i\n", strOutFile.data(), cTrackInfo.nTrack + 1, pSACD->m_nTracks);
-        }
+        printf("FILE\t%s\t%.2i\t%.2i\n", strOutFile.data(), cTrackInfo.nTrack + 1, pSACD->m_nTracks);
 
         g_nFinished++;
     }
@@ -666,28 +610,20 @@ int main(int argc, char* argv[])
     "                         this, the files will be placed in the input file's\n"
     "                         directory\n"
     "  -r, --rate           : The output samplerate.\n"
-    "                         Valid rates are: 88200, 96000, 176400 and 192000.\n"
+    "                         Valid rates are: 96000 or 192000.\n"
     "                         If you omit this, 96KHz will be used.\n"
-    "  -s, --stereo         : Only extract the 2-channel area if it exists.\n"
-    "                         If you omit this, the multichannel area will have priority.\n"
-    "  -p, --progress       : Display progress to new lines. Use this if you intend\n"
-    "                         to parse the output through a script. This option only\n"
-    "                         lists either one progress percentage per line, or one\n"
-    "                         status/error message.\n"
     "  -h, --help           : Show this help message\n\n";
 
     const struct option tOptionsTable[] =
     {
-        {"infile", required_argument, NULL, 'i' },
-        {"outdir", required_argument, NULL, 'o' },
-        {"rate", required_argument, NULL, 'r' },
-        {"stereo", no_argument, NULL, 's'},
-        {"progress", no_argument, NULL, 'p'},
-        {"help", no_argument, NULL, 'h' },
-        { NULL, 0, NULL, 0 }
+        {"infile", required_argument, nullptr, 'i' },
+        {"outdir", required_argument, nullptr, 'o' },
+        {"rate", required_argument, nullptr, 'r' },
+        {"help", no_argument, nullptr, 'h' },
+        { nullptr, 0, nullptr, 0 }
     };
 
-    while ((nOpt = getopt_long(argc, argv, "i:o:r:sph", tOptionsTable, NULL)) >= 0)
+    while ((nOpt = getopt_long(argc, argv, "i:o:r:h", tOptionsTable, nullptr)) >= 0)
     {
         switch (nOpt)
         {
@@ -701,7 +637,7 @@ int main(int argc, char* argv[])
             {
                 string s = optarg;
 
-                if (s == "88200" || s == "96000" || s == "176400" || s == "192000")
+                if (s == "96000" || s == "192000")
                 {
                     g_nSampleRate = stoi(optarg);
                 }
@@ -712,12 +648,6 @@ int main(int argc, char* argv[])
                 }
                 break;
             }
-            case 's':
-                g_nArea = AREA_TWOCH;
-                break;
-            case 'p':
-                g_bProgressLine = true;
-                break;
             default:
                 bPrintHelp = true;
                 break;
@@ -726,7 +656,7 @@ int main(int argc, char* argv[])
 
     if (bPrintHelp || argc == 1 || strIn.empty())
     {
-        printf(g_bProgressLine ? "PANIC: Invalid command-line syntax\n" : strHelpText);
+        printf("PANIC: Invalid command-line syntax\n");
         return 0;
     }
 
@@ -765,49 +695,13 @@ int main(int argc, char* argv[])
         exit(1);
     }
 
-    if (!g_bProgressLine)
-    {
-        printf("\n\nsacd - Command-line SACD decoder version %s\n\n", APPVERSION);
-    }
+    printf("\n\nsacd - Command-line SACD decoder version %s\n\n", APPVERSION);
+    printf("PROCESSING\t%s\n", strIn.data());
 
     int nTwoch = pSacd->m_pSacdReader->get_track_count(AREA_TWOCH);
     int nMulch = pSacd->m_pSacdReader->get_track_count(AREA_MULCH);
-    bool bWarn = false;
-    area_id_e nArea;
 
-    if (nMulch > 0 && nTwoch > nMulch && g_nArea != AREA_TWOCH)
-    {
-        nArea = AREA_BOTH;
-        bWarn = true;
-    }
-    else if (nTwoch > 0 && nMulch > nTwoch && g_nArea != AREA_TWOCH)
-    {
-        nArea = AREA_BOTH;
-        bWarn = true;
-    }
-    else if (nMulch > 0 && g_nArea != AREA_TWOCH)
-    {
-        nArea = AREA_MULCH;
-    }
-    else if (nTwoch > 0)
-    {
-        nArea = AREA_TWOCH;
-    }
-    else
-    {
-        nArea = AREA_MULCH;
-    }
-
-    if(nArea == AREA_MULCH || nArea == AREA_BOTH)
-    {
-        for (int i = 0; i < nMulch; i++)
-        {
-            TrackInfo cTrackInfo = {i, AREA_MULCH};
-            g_arrQueue.push_back(cTrackInfo);
-        }
-    }
-
-    if(nArea == AREA_TWOCH || nArea == AREA_BOTH)
+    if (nTwoch > 0)
     {
         for (int i = 0; i < nTwoch; i++)
         {
@@ -815,16 +709,12 @@ int main(int argc, char* argv[])
             g_arrQueue.push_back(cTrackInfo);
         }
     }
-
-    if(bWarn)
+    else
     {
-        if (g_bProgressLine)
+        for (int i = 0; i < nMulch; i++)
         {
-            printf("WARNINGThe multichannel and stereo areas have a different track count: extracting both.\n");
-        }
-        else
-        {
-            printf("WARNING: The multichannel and stereo areas have a different track count: extracting both.\n\n");
+            TrackInfo cTrackInfo = {i, AREA_MULCH};
+            g_arrQueue.push_back(cTrackInfo);
         }
     }
 
@@ -841,12 +731,12 @@ int main(int argc, char* argv[])
     {
         arrSACD[i] = new SACD();
         arrSACD[i]->open(strIn);
-        pthread_create(&arrThreads[i], NULL, fnDecoder, arrSACD[i]);
+        pthread_create(&arrThreads[i], nullptr, fnDecoder, arrSACD[i]);
         pthread_detach(arrThreads[i]);
     }
 
-    pthread_create(&hThreadProgress, NULL, fnProgress, &arrSACD);
-    pthread_join(hThreadProgress, NULL);
+    pthread_create(&hThreadProgress, nullptr, fnProgress, &arrSACD);
+    pthread_join(hThreadProgress, nullptr);
     pthread_mutex_destroy(&g_hMutex);
 
     for (int i = 0; i < g_nThreads; i++)
@@ -856,14 +746,7 @@ int main(int argc, char* argv[])
 
     int nSeconds = time(0) - nNow;
 
-    if (g_bProgressLine)
-    {
-        printf("FINISHED\t%d\n", nSeconds);
-    }
-    else
-    {
-        printf("\nFinished in %d seconds.\n\n", nSeconds);
-    }
+    printf("FINISHED\t%d\n", nSeconds);
 
     return 0;
 }

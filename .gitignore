@@ -3,3 +3,5 @@ project.geany
 TODO
 *.o
 **/*.o
+sacd
+cmake-build-debug

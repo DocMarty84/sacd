@@ -29,8 +29,6 @@ dsdpcm_converter_hq::dsdpcm_converter_hq(): m_dither24(24)
     m_decimation = 0;
     m_upsampling = 0;
     m_nChannels = 0;
-    m_nDsdSamplerate = 0;
-    m_nPcmSamplerate = 0;
     conv_called = false;
 
     memset(m_resampler, 0, sizeof(m_resampler));
@@ -65,7 +63,7 @@ dsdpcm_converter_hq::~dsdpcm_converter_hq()
 
 float dsdpcm_converter_hq::get_delay()
 {
-    return (m_resampler[0] != NULL) ? (float)(m_resampler[0]->getFirSize() / 2) / (float)m_decimation : 0;
+    return (m_resampler[0] != nullptr) ? (float)(m_resampler[0]->getFirSize() / 2) / (float)m_decimation : 0;
 }
 
 bool dsdpcm_converter_hq::is_convert_called()
@@ -79,8 +77,6 @@ int dsdpcm_converter_hq::init(int channels, int dsd_samplerate, int pcm_samplera
     int i, taps, sinc_freq, multiplier, divisor;
 
     this->m_nChannels = channels;
-    this->m_nDsdSamplerate = dsd_samplerate;
-    this->m_nPcmSamplerate = pcm_samplerate;
 
     switch (dsd_samplerate)
     {

@@ -16,7 +16,6 @@ LDFLAGS += $(foreach library,$(LIBRARIES),-l$(library))
 
 all: clean str_data ac_data coded_table frame_reader dst_decoder dst_decoder_mt \
      upsampler dsd_pcm_converter_hq \
-     dsd_pcm_converter_engine \
      scarletbook sacd_disc sacd_media sacd_dsdiff sacd_dsf \
      main \
      sacd
@@ -39,9 +38,6 @@ dst_decoder: str_data.h ac_data.h coded_table.h frame_reader.h dst_decoder.h dst
 dst_decoder_mt: dst_decoder.h dst_decoder_mt.h dst_decoder_mt.cpp
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c libdstdec/dst_decoder_mt.cpp -o libdstdec/dst_decoder_mt.o
 
-dsd_pcm_converter_engine: dsd_pcm_converter_multistage.h dsd_pcm_converter_engine.h dsd_pcm_converter_engine.cpp
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c libdsd2pcm/dsd_pcm_converter_engine.cpp -o libdsd2pcm/dsd_pcm_converter_engine.o
-
 upsampler: dither.h upsampler.h upsampler.cpp
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c libdsd2pcm/upsampler.cpp -o libdsd2pcm/upsampler.o
 
@@ -63,11 +59,11 @@ sacd_dsdiff: scarletbook.h sacd_dsd.h sacd_reader.h endianess.h sacd_dsdiff.h sa
 sacd_dsf: scarletbook.h sacd_dsd.h sacd_reader.h endianess.h sacd_dsf.h sacd_dsf.cpp
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c libsacd/sacd_dsf.cpp -o libsacd/sacd_dsf.o
 
-main: version.h sacd_reader.h sacd_disc.h sacd_dsdiff.h sacd_dsf.h dsd_pcm_converter_hq.h dsd_pcm_converter_engine.h main.cpp
+main: version.h sacd_reader.h sacd_disc.h sacd_dsdiff.h sacd_dsf.h dsd_pcm_converter_hq.h main.cpp
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c main.cpp -o main.o
 
-sacd: frame_reader.o ac_data.o str_data.o coded_table.o dst_decoder.o dst_decoder_mt.o dsd_pcm_converter_hq.o dsd_pcm_converter_engine.o sacd_media.o sacd_dsf.o sacd_dsdiff.o sacd_disc.o main.o
-	$(CXX) $(CXXFLAGS) -o sacd libdsd2pcm/upsampler.o libdsd2pcm/dsd_pcm_converter_hq.o libdsd2pcm/dsd_pcm_converter_engine.o libdstdec/frame_reader.o libdstdec/ac_data.o libdstdec/str_data.o libdstdec/coded_table.o libdstdec/dst_decoder.o libdstdec/dst_decoder_mt.o libsacd/sacd_media.o libsacd/sacd_dsf.o libsacd/sacd_dsdiff.o libsacd/scarletbook.o libsacd/sacd_disc.o main.o $(LDFLAGS)
+sacd: frame_reader.o ac_data.o str_data.o coded_table.o dst_decoder.o dst_decoder_mt.o dsd_pcm_converter_hq.o sacd_media.o sacd_dsf.o sacd_dsdiff.o sacd_disc.o main.o
+	$(CXX) $(CXXFLAGS) -o sacd libdsd2pcm/upsampler.o libdsd2pcm/dsd_pcm_converter_hq.o libdstdec/frame_reader.o libdstdec/ac_data.o libdstdec/str_data.o libdstdec/coded_table.o libdstdec/dst_decoder.o libdstdec/dst_decoder_mt.o libsacd/sacd_media.o libsacd/sacd_dsf.o libsacd/sacd_dsdiff.o libsacd/scarletbook.o libsacd/sacd_disc.o main.o $(LDFLAGS)
 
 clean:
 	rm -f sacd *.o $(foreach librarydir,$(LIBRARY_DIRS),$(librarydir)/*.o)

@@ -20,6 +20,9 @@
 
 #pragma once
 
+#include "dsd_pcm_constants.h"
+#include "dsd_pcm_util.h"
+
 class DSDPCMFir
 {
     using ctable_t = double[256];
