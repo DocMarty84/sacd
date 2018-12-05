@@ -170,13 +170,7 @@ int DSDPCMConverter::convert(uint8_t *dsd_data, int dsd_samples, float *pcm_data
     int pcm_samples = 0;
 
     if (!dsd_data) {
-        for (int sample = 0; sample < dsd_samples / 2; sample++) {
-            uint8_t temp = dsd_data[dsd_samples - 1 - sample];
-            dsd_data[dsd_samples - 1 - sample] = swap_bits[dsd_data[sample]];
-            dsd_data[sample] = swap_bits[temp];
-        }
-
-        return convertResample(dsd_data, dsd_samples, pcm_data);
+        return convertResample(nullptr, 0, pcm_data);
     }
 
     if (!conv_called) {
@@ -200,7 +194,7 @@ int DSDPCMConverter::convertResample(uint8_t *dsd_data, int dsd_samples, float *
         return -1;
     }
 
-    int i, pcm_samples, ch, offset, dsd_offset, pcm_offset, j;
+    int pcm_samples, offset, dsd_offset, pcm_offset;
     double dsd_input[DSDPCM_MAX_CHANNELS][MAX_RESAMPLING_IN + 8], x[DSDPCM_MAX_CHANNELS][MAX_RESAMPLING_OUT];
     uint8_t dsd8bits;
     unsigned int x_samples = 1;
@@ -213,12 +207,12 @@ int DSDPCMConverter::convertResample(uint8_t *dsd_data, int dsd_samples, float *
     offset = 0; // offset in dsd_input
 
     // all PCM samples
-    for (i = 0; i < pcm_samples; i += x_samples) {
+    for (int i = 0; i < pcm_samples; i += x_samples) {
         // fill decimation buffer for downsampling
         for (; offset < m_decimation; offset += 8) {
             // has padding of 8 elements
             // all channels
-            for (ch = 0; ch < m_nChannels; ch++) {
+            for (int ch = 0; ch < m_nChannels; ch++) {
                 dsd8bits = dsd_data[dsd_offset++];
 
                 // fastfill doubles from bits
@@ -228,7 +222,7 @@ int DSDPCMConverter::convertResample(uint8_t *dsd_data, int dsd_samples, float *
         }
 
         // now fill pcm samples in all channels!!!
-        for (ch = 0; ch < m_nChannels; ch++) {
+        for (int ch = 0; ch < m_nChannels; ch++) {
             m_resampler[ch]->processSample(dsd_input[ch], m_decimation, x[ch], &x_samples);
 
             // shift overfill in channel
@@ -239,8 +233,8 @@ int DSDPCMConverter::convertResample(uint8_t *dsd_data, int dsd_samples, float *
         offset -= m_decimation;
 
         // and output interleaving samples
-        for (j = 0; j < (int) x_samples; j++) {
-            for (ch = 0; ch < m_nChannels; ch++) {
+        for (int j = 0; j < (int) x_samples; j++) {
+            for (int ch = 0; ch < m_nChannels; ch++) {
                 // interleave
                 pcm_data[pcm_offset++] = (float) m_dither24.processSample(x[ch][j]);
             }
