@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.12)
 project(sacd)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 
 include_directories(libdsd2pcm)
 include_directories(libdstdec)
@@ -10,14 +10,8 @@ include_directories(libsacd)
 add_executable(sacd
         libdsd2pcm/dither.h
         libdsd2pcm/dsd_pcm_constants.h
+        libdsd2pcm/dsd_pcm_converter.cpp
         libdsd2pcm/dsd_pcm_converter.h
-        libdsd2pcm/dsd_pcm_converter_hq.cpp
-        libdsd2pcm/dsd_pcm_converter_hq.h
-        libdsd2pcm/dsd_pcm_converter_multistage.h
-        libdsd2pcm/dsd_pcm_filter_setup.h
-        libdsd2pcm/dsd_pcm_fir.h
-        libdsd2pcm/dsd_pcm_util.h
-        libdsd2pcm/pcm_pcm_fir.h
         libdsd2pcm/upsampler.cpp
         libdsd2pcm/upsampler.h
         libdstdec/ac_data.cpp
@@ -48,6 +42,8 @@ add_executable(sacd
         libsacd/scarletbook.cpp
         libsacd/scarletbook.h
         libsacd/version.h
+        converter_core.cpp
+        converter_core.h
         main.cpp
         )
 

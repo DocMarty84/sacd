@@ -20,12 +20,10 @@
 
 #include <string.h>
 #include <assert.h>
-#include "dsd_pcm_converter_hq.h"
+#include "dsd_pcm_converter.h"
 
-dsdpcm_converter_hq::dsdpcm_converter_hq(): m_dither24(24)
+DSDPCMConverter::DSDPCMConverter() : m_dither24(24)
 {
-    unsigned int i, j;
-
     m_decimation = 0;
     m_upsampling = 0;
     m_nChannels = 0;
@@ -34,125 +32,114 @@ dsdpcm_converter_hq::dsdpcm_converter_hq(): m_dither24(24)
     memset(m_resampler, 0, sizeof(m_resampler));
 
     // fill bits_table
-    for (i = 0; i < 16; i++)
-    {
-        for (j = 0; j < 4; j++)
+    for (int i = 0; i < 16; i++) {
+        for (int j = 0; j < 4; j++) {
             m_bits_table[i][j] = (i & (1 << (3 - j))) ? 1.0 : -1.0;
+        }
+
     }
 
-    for (int i = 0; i < 256; i++)
-    {
+    for (int i = 0; i < 256; i++) {
         swap_bits[i] = 0;
-
-        for (int j = 0; j < 8; j++)
-        {
+        for (int j = 0; j < 8; j++) {
             swap_bits[i] |= ((i >> j) & 1) << (7 - j);
         }
     }
 }
 
-dsdpcm_converter_hq::~dsdpcm_converter_hq()
+DSDPCMConverter::~DSDPCMConverter()
 {
     int i;
 
-    for (i = 0; i < DSDPCM_MAX_CHANNELS; i++)
-    {
+    for (i = 0; i < DSDPCM_MAX_CHANNELS; i++) {
         delete m_resampler[i];
     }
 }
 
-float dsdpcm_converter_hq::get_delay()
+float DSDPCMConverter::get_delay()
 {
-    return (m_resampler[0] != nullptr) ? (float)(m_resampler[0]->getFirSize() / 2) / (float)m_decimation : 0;
+    return (m_resampler[0] != nullptr) ? m_resampler[0]->getFirSize() / 2.0f / m_decimation : 0.0f;
 }
 
-bool dsdpcm_converter_hq::is_convert_called()
+bool DSDPCMConverter::is_convert_called()
 {
     return conv_called;
 }
 
-int dsdpcm_converter_hq::init(int channels, int dsd_samplerate, int pcm_samplerate)
+int DSDPCMConverter::init(int channels, int dsd_samplerate, int pcm_samplerate)
 {
     double *impulse;
-    int i, taps, sinc_freq, multiplier, divisor;
+    int sinc_freq;
+    unsigned int taps, multiplier, divisor;
 
     this->m_nChannels = channels;
 
-    switch (dsd_samplerate)
-    {
-        case DSDxFs64:
-        {
-            switch (pcm_samplerate)
-            {
-                case 96000:
-                    multiplier = 1;
-                    divisor = 1;
-                    break;
-                case 192000:
-                    multiplier = 1;
-                    divisor = 2;
-                    break;
-                default:
-                    return -2;
-            }
-
+    switch (dsd_samplerate) {
+    case DSDxFs64: {
+        switch (pcm_samplerate) {
+        case 96000:
+            multiplier = 1;
+            divisor = 1;
             break;
-        }
-        case DSDxFs128:
-            switch (pcm_samplerate)
-            {
-            case 96000:
-                multiplier = 2;
-                divisor = 1;
-                break;
-            case 192000:
-                multiplier = 2;
-                divisor = 2;
-                break;
-            default:
-                return -2;
-            }
-            break;
-        case DSDxFs256:
-            switch (pcm_samplerate)
-            {
-            case 96000:
-                multiplier = 4;
-                divisor = 1;
-                break;
-            case 192000:
-                multiplier = 4;
-                divisor = 2;
-                break;
-            default:
-                return -2;
-            }
-            break;
-        case DSDxFs512:
-            switch (pcm_samplerate)
-            {
-            case 96000:
-                multiplier = 8;
-                divisor = 1;
-                break;
-            case 192000:
-                multiplier = 8;
-                divisor = 2;
-                break;
-            default:
-                return -2;
-            }
+        case 192000:
+            multiplier = 1;
+            divisor = 2;
             break;
         default:
-            return -1;
+            return -2;
+        }
+
+        break;
+    }
+    case DSDxFs128:
+        switch (pcm_samplerate) {
+        case 96000:
+            multiplier = 2;
+            divisor = 1;
             break;
+        case 192000:
+            multiplier = 2;
+            divisor = 2;
+            break;
+        default:
+            return -2;
+        }
+        break;
+    case DSDxFs256:
+        switch (pcm_samplerate) {
+        case 96000:
+            multiplier = 4;
+            divisor = 1;
+            break;
+        case 192000:
+            multiplier = 4;
+            divisor = 2;
+            break;
+        default:
+            return -2;
+        }
+        break;
+    case DSDxFs512:
+        switch (pcm_samplerate) {
+        case 96000:
+            multiplier = 8;
+            divisor = 1;
+            break;
+        case 192000:
+            multiplier = 8;
+            divisor = 2;
+            break;
+        default:
+            return -2;
+        }
+        break;
+    default:
+        return -1;
     }
 
     // prepare filter
-    for (i = 0; i < DSDPCM_MAX_CHANNELS; i++)
-    {
-        delete m_resampler[i];
-    }
+    for (auto &i : m_resampler)
+        delete i;
 
     memset(m_resampler, 0, sizeof(m_resampler));
 
@@ -168,7 +155,7 @@ int dsdpcm_converter_hq::init(int channels, int dsd_samplerate, int pcm_samplera
 
     generateFilter(impulse, taps, sinc_freq);
 
-    for (i = 0; i < channels; i++)
+    for (int i = 0; i < channels; i++)
         m_resampler[i] = new ResamplerNxMx(m_upsampling, m_decimation, impulse, taps);
 
     delete[] impulse;
@@ -178,26 +165,25 @@ int dsdpcm_converter_hq::init(int channels, int dsd_samplerate, int pcm_samplera
     return 0;
 }
 
-int dsdpcm_converter_hq::convert(uint8_t* dsd_data, int dsd_samples, float* pcm_data)
+int DSDPCMConverter::convert(uint8_t *dsd_data, int dsd_samples, float *pcm_data)
 {
     int pcm_samples = 0;
 
-    if (!dsd_data)
-    {
-        for (int sample = 0; sample < dsd_samples / 2; sample++)
-        {
+    if (!dsd_data) {
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCDFAInspection"
+        for (int sample = 0; sample < dsd_samples / 2; sample++) {
             uint8_t temp = dsd_data[dsd_samples - 1 - sample];
             dsd_data[dsd_samples - 1 - sample] = swap_bits[dsd_data[sample]];
             dsd_data[sample] = swap_bits[temp];
         }
 
         return convertResample(dsd_data, dsd_samples, pcm_data);
+#pragma clang diagnostic pop
     }
 
-    if (!conv_called)
-    {
-        for (int sample = 0; sample < dsd_samples; sample++)
-        {
+    if (!conv_called) {
+        for (int sample = 0; sample < dsd_samples; sample++) {
             dsd_data[sample] = swap_bits[dsd_data[dsd_samples - 1 - sample]];
         }
 
@@ -211,10 +197,9 @@ int dsdpcm_converter_hq::convert(uint8_t* dsd_data, int dsd_samples, float* pcm_
     return pcm_samples;
 }
 
-int dsdpcm_converter_hq::convertResample(uint8_t* dsd_data, int dsd_samples, float* pcm_data)
+int DSDPCMConverter::convertResample(uint8_t *dsd_data, int dsd_samples, float *pcm_data)
 {
-    if((dsd_samples % m_decimation) != 0)
-    {
+    if ((dsd_samples % m_decimation) != 0) {
         return -1;
     }
 
@@ -231,15 +216,12 @@ int dsdpcm_converter_hq::convertResample(uint8_t* dsd_data, int dsd_samples, flo
     offset = 0; // offset in dsd_input
 
     // all PCM samples
-    for (i = 0; i < pcm_samples; i += x_samples)
-    {
+    for (i = 0; i < pcm_samples; i += x_samples) {
         // fill decimation buffer for downsampling
-        for (; offset < m_decimation; offset += 8)
-        {
+        for (; offset < m_decimation; offset += 8) {
             // has padding of 8 elements
             // all channels
-            for (ch = 0; ch < m_nChannels; ch++)
-            {
+            for (ch = 0; ch < m_nChannels; ch++) {
                 dsd8bits = dsd_data[dsd_offset++];
 
                 // fastfill doubles from bits
@@ -249,8 +231,7 @@ int dsdpcm_converter_hq::convertResample(uint8_t* dsd_data, int dsd_samples, flo
         }
 
         // now fill pcm samples in all channels!!!
-        for (ch = 0; ch < m_nChannels; ch++)
-        {
+        for (ch = 0; ch < m_nChannels; ch++) {
             m_resampler[ch]->processSample(dsd_input[ch], m_decimation, x[ch], &x_samples);
 
             // shift overfill in channel
@@ -261,12 +242,10 @@ int dsdpcm_converter_hq::convertResample(uint8_t* dsd_data, int dsd_samples, flo
         offset -= m_decimation;
 
         // and output interleaving samples
-        for (j = 0; j < (int)x_samples; j++)
-        {
-            for (ch = 0; ch < m_nChannels; ch++)
-            {
+        for (j = 0; j < (int) x_samples; j++) {
+            for (ch = 0; ch < m_nChannels; ch++) {
                 // interleave
-                pcm_data[pcm_offset++] = (float)m_dither24.processSample(x[ch][j]);
+                pcm_data[pcm_offset++] = (float) m_dither24.processSample(x[ch][j]);
             }
         }
     }

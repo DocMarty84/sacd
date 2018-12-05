@@ -18,22 +18,26 @@
     along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
-#ifndef _upsampler_h_
-#define _upsampler_h_
+#ifndef __UPSAMPLER_H__
+#define __UPSAMPLER_H__
 
 #include "dither.h"
+
 
 // history buffer for FIR
 class FirHistory
 {
 public:
-    FirHistory(unsigned int fir_size);
+    explicit FirHistory(unsigned int fir_size);
+
     ~FirHistory();
-    FirHistory&  operator=(const FirHistory &obj);
+
+    FirHistory &operator=(const FirHistory &obj);
+
     void pushSample(double x);
-    void reset(bool reset_to_1 = false);
-    double *getBuffer() { return &m_x[m_head]; }
-    unsigned int getSize() const { return m_fir_size; }
+
+    double *getBuffer()
+    { return &m_x[m_head]; }
 
 private:
     double *m_x; // [m_fir_size * 2]
@@ -41,20 +45,20 @@ private:
     unsigned int m_head; // write to m_x[--head]
 };
 
+
 // FIR filter
 class FirFilter
 {
 public:
     FirFilter(const double *fir, unsigned int fir_size, bool no_history = false);
+
     FirFilter();
+
     ~FirFilter();
-    FirFilter&  operator=(const FirFilter &obj);
-    double processSample(double x);
-    void reset(bool reset_to_1 = false);
-    void pushSample(double x);
+
+    FirFilter &operator=(const FirFilter &obj);
+
     double fast_convolve(double *x);
-    const double *getFir() const { return m_fir; }
-    unsigned int getFirSize() const { return m_org_fir_size; }
 
 private:
     double *m_fir; // [m_fir_size], aligned
@@ -64,15 +68,21 @@ private:
     unsigned int m_org_fir_size;
 };
 
+
 // Nx/Mx resampler
 class ResamplerNxMx
 {
 public:
     ResamplerNxMx(unsigned int nX, unsigned int mX, const double *fir, unsigned int fir_size);
+
     ~ResamplerNxMx();
+
     void processSample(const double *x, unsigned int x_n, double *y, unsigned int *y_n);
-    void reset(bool reset_to_1 = false);
-    unsigned int getFirSize() const { return m_fir_size; }
+
+    unsigned int getFirSize() const
+    {
+        return m_fir_size;
+    }
 
 private:
     unsigned int m_xN; // up^
@@ -86,4 +96,4 @@ private:
 // generate windowed sinc impulse response for low-pass filter
 void generateFilter(double *impulse, int taps, double sinc_freq);
 
-#endif
+#endif // __UPSAMPLER_H__

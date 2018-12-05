@@ -19,23 +19,30 @@
     along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
-#ifndef _dither_h_
-#define _dither_h_
+#ifndef __DITHER_H__
+#define __DITHER_H__
 
 // inline dithering implementation
 class Dither
 {
 public:
+    explicit Dither(unsigned int n_bits);
 
-    Dither(unsigned int n_bits);
-    Dither& operator=(const Dither &obj);
-    double processSample(double x) { return (x + m_rand_max * (double)(fast_rand() - (RAND_MAX / 2)) / (double)(RAND_MAX / 2)); }
+    Dither &operator=(const Dither &obj);
+
+    double processSample(double x)
+    {
+        return (x + m_rand_max * (fast_rand() - (RAND_MAX / 2.0)) / (RAND_MAX / 2.0));
+    }
 
 protected:
-
     double m_rand_max;
     int m_holdrand;
-    int fast_rand() { return (((m_holdrand = m_holdrand * 214013L + 2531011L) >> 16) & 0x7fff); } // libc rand() is too slow
+
+    int fast_rand()
+    {
+        return (((m_holdrand = m_holdrand * 214013 + 2531011) >> 16) & 0x7fff);
+    }
 };
 
-#endif
+#endif // __DITHER_H__

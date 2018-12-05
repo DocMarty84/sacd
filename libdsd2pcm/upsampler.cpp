@@ -88,24 +88,6 @@ void FirHistory::pushSample(double x)
     m_x[--m_head] = x;
 }
 
-void FirHistory::reset(bool reset_to_1)
-{
-    unsigned int i;
-
-    m_head = m_fir_size;
-
-    if (!reset_to_1)
-    {
-        memset(m_x, 0, m_fir_size * 2 * sizeof(double));
-
-    }
-    else
-    {
-        for (i = 0; i < m_fir_size * 2; i++)
-            m_x[i] = 1.0;
-    }
-}
-
 // FirFilter
 FirFilter::FirFilter(const double *fir, unsigned int fir_size, bool no_history) : m_x(!no_history ? fir_size : 0)
 {
@@ -158,25 +140,11 @@ FirFilter& FirFilter::operator=(const FirFilter &obj)
     return *this;
 }
 
-double FirFilter::processSample(double x)
-{
-    double y;
-
-    m_x.pushSample(x);
-
-    y = fast_convolve(m_x.getBuffer());
-
-    return y;
-}
-
-void FirFilter::pushSample(double x)
-{
-    m_x.pushSample(x);
-}
-
 // fir must be aligned! fir_size must be %8!
 double FirFilter::fast_convolve(double *x)
 {
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "portability-simd-intrinsics"
     unsigned int i;
     double y;
 
@@ -205,11 +173,7 @@ double FirFilter::fast_convolve(double *x)
     y = xy_flt[0] + xy_flt[1];
 
     return y;
-}
-
-void FirFilter::reset(bool reset_to_1)
-{
-    m_x.reset(reset_to_1);
+#pragma clang diagnostic pop
 }
 
 // ResamplerNxMx
@@ -287,18 +251,6 @@ void ResamplerNxMx::processSample(const double *x, unsigned int x_n, double *y, 
     *y_n = offset;
 }
 
-void ResamplerNxMx::reset(bool reset_to_1)
-{
-    unsigned int i;
-
-    for (i = 0; i < m_xN; i++)
-        m_flt[i].reset();
-
-    m_x.reset(reset_to_1);
-
-    m_xN_counter = 0;
-}
-
 // Dither
 Dither::Dither(unsigned int n_bits)
 {
@@ -308,7 +260,7 @@ Dither::Dither(unsigned int n_bits)
 
     assert(n_bits <= 31);
 
-    max_value = 2 << n_bits;
+    max_value = static_cast<unsigned int>(2 << n_bits);
     m_rand_max = 1.0 / (double)max_value;
 
     m_holdrand = last_holdrand++;

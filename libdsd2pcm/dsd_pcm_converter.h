@@ -1,6 +1,6 @@
 /*
-    Copyright (c) 2015-2016 Robert Tari <robert.tari@gmail.com>
-    Copyright (c) 2011-2015 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
+    Copyright 2015-2016 Robert Tari <robert.tari@gmail.com>
+    Copyright 2012 Vladislav Goncharov <vl-g@yandex.ru> (HQ DSD->PCM converter 88.2/96 kHz)
 
     This file is part of SACD.
 
@@ -18,83 +18,43 @@
     along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
-#pragma once
+#ifndef __DSD_PCM_CONVERTER_H__
+#define __DSD_PCM_CONVERTER_H__
 
-#include "dsd_pcm_filter_setup.h"
-#include "dsd_pcm_fir.h"
-#include "pcm_pcm_fir.h"
+#include <stdlib.h>
+#include <stdint.h>
 
-enum conv_type_e
-{
-    DSDPCM_CONV_UNKNOWN    = -1,
-    DSDPCM_CONV_MULTISTAGE =  0,
-    DSDPCM_CONV_DIRECT     =  1,
-    DSDPCM_CONV_USER       =  2
-};
-
-enum declick_side_e
-{
-    DECLICK_NONE = 0,
-    DECLICK_LEFT = 1,
-    DECLICK_RIGHT = 2
-};
+#include "dsd_pcm_constants.h"
+#include "upsampler.h"
 
 class DSDPCMConverter
 {
-protected:
-
-    int framerate;
-    int dsd_samplerate;
-    int pcm_samplerate;
-    float delay;
-    double* pcm_temp1;
-    double* pcm_temp2;
-
 public:
+    DSDPCMConverter();
 
-    DSDPCMConverter()
-    {
-        pcm_temp1 = nullptr;
-        pcm_temp2 = nullptr;
-    }
+    ~DSDPCMConverter();
 
-    virtual ~DSDPCMConverter()
-    {
-        free_pcm_temp1();
-        free_pcm_temp2();
-    }
+    int init(int channels, int dsd_samplerate, int pcm_samplerate);
 
-    float get_delay()
-    {
-        return delay;
-    }
+    int convert(uint8_t *dsd_data, int dsd_samples, float *pcm_data);
 
-    virtual void init(DSDPCMFilterSetup& flt_setup, int dsd_samples) = 0;
-    virtual int convert(uint8_t* dsd_data, double* pcm_data, int dsd_samples) = 0;
+    float get_delay();
 
-protected:
+    bool is_convert_called();
 
-    void alloc_pcm_temp1(int pcm_samples)
-    {
-        free_pcm_temp1();
-        pcm_temp1 = (double*)DSDPCMUtil::mem_alloc(pcm_samples * sizeof(double));
-    }
+private:
+    unsigned int m_decimation;
+    unsigned int m_upsampling;
+    int m_nChannels;
+    bool conv_called;
+    static const int MAX_RESAMPLING_IN = 147 * 2; // 64x -> 96  (147 -> 5 for 64x -> 96, 128x not supported)
+    static const int MAX_RESAMPLING_OUT = 5 * 2; // 147 -> 5 for 64x -> 96
+    ResamplerNxMx *m_resampler[DSDPCM_MAX_CHANNELS];
+    Dither m_dither24;
+    double m_bits_table[16][4];
+    uint8_t swap_bits[256];
 
-    void alloc_pcm_temp2(int pcm_samples)
-    {
-        free_pcm_temp2();
-        pcm_temp2 = (double*)DSDPCMUtil::mem_alloc(pcm_samples * sizeof(double));
-    }
-
-    void free_pcm_temp1()
-    {
-        DSDPCMUtil::mem_free(pcm_temp1);
-        pcm_temp1 = nullptr;
-    }
-
-    void free_pcm_temp2()
-    {
-        DSDPCMUtil::mem_free(pcm_temp2);
-        pcm_temp2 = nullptr;
-    }
+    int convertResample(uint8_t *dsd_data, int dsd_samples, float *pcm_data);
 };
+
+#endif // __DSD_PCM_CONVERTER_H__
