@@ -61,7 +61,7 @@ void packageInt(unsigned char * buf, int offset, int num, int bytes)
 
 void * fnProgress (void* threadargs)
 {
-    vector<SACD*>* arrSACD = (vector<SACD*>*)threadargs;
+    vector<ConverterCore*>* arrSACD = (vector<ConverterCore*>*)threadargs;
 
     while(1)
     {
@@ -91,7 +91,7 @@ void * fnProgress (void* threadargs)
 
 void * fnDecoder (void* threadargs)
 {
-    SACD* pSACD = (SACD*)threadargs;
+    ConverterCore* pSACD = (ConverterCore*)threadargs;
 
     while(!g_arrQueue.empty())
     {
@@ -250,7 +250,7 @@ int main(int argc, char* argv[])
         g_strOut += "/";
     }
 
-    SACD * pSacd = new SACD();
+    ConverterCore * pSacd = new ConverterCore();
 
     if (!pSacd->open(strIn))
     {
@@ -285,12 +285,12 @@ int main(int argc, char* argv[])
 
     time_t nNow = time(0);
     pthread_t hThreadProgress;
-    vector<SACD*> arrSACD(g_nThreads);
+    vector<ConverterCore*> arrSACD(g_nThreads);
     vector<pthread_t> arrThreads(g_nThreads);
 
     for (int i = 0; i < g_nThreads; i++)
     {
-        arrSACD[i] = new SACD();
+        arrSACD[i] = new ConverterCore();
         arrSACD[i]->open(strIn);
         pthread_create(&arrThreads[i], nullptr, fnDecoder, arrSACD[i]);
         pthread_detach(arrThreads[i]);

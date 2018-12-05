@@ -18,8 +18,8 @@
     along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
-#ifndef _SACD_DSDIFF_H_INCLUDED
-#define _SACD_DSDIFF_H_INCLUDED
+#ifndef __SACD_DSDIFF_H__
+#define __SACD_DSDIFF_H__
 
 #include <stdint.h>
 #include <vector>
@@ -37,7 +37,10 @@ public:
     uint32_t length;
 };
 
-enum MarkType {TrackStart = 0, TrackStop = 1, ProgramStart = 2, Index = 4};
+enum MarkType
+{
+    TrackStart = 0, TrackStop = 1, ProgramStart = 2, Index = 4
+};
 
 class Marker
 {
@@ -74,20 +77,31 @@ class sacd_dsdiff_t : public sacd_reader_t
 {
 public:
     sacd_dsdiff_t();
+
     virtual ~sacd_dsdiff_t();
+
     uint32_t get_track_count(area_id_e area_id = AREA_BOTH);
+
     int get_channels();
+
     int get_samplerate();
+
     int get_framerate();
+
     float getProgress();
 
-    int open(sacd_media_t* p_file);
+    int open(sacd_media_t *p_file);
+
     bool close();
+
     string set_track(uint32_t track_number, area_id_e area_id = AREA_BOTH, uint32_t offset = 0);
-    bool read_frame(uint8_t* frame_data, size_t* frame_size, frame_type_e* frame_type);
+
+    bool read_frame(uint8_t *frame_data, size_t *frame_size, frame_type_e *frame_type);
+
 private:
     uint64_t get_dsti_for_frame(uint32_t frame_nr);
-    sacd_media_t* m_file;
+
+    sacd_media_t *m_file;
     uint32_t m_samplerate;
     uint16_t m_channel_count;
     int m_dst_encoded;
@@ -106,4 +120,4 @@ private:
     uint64_t m_current_size;
 };
 
-#endif
+#endif  // __SACD_DSDIFF_H__

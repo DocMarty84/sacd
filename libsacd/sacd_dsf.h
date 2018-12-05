@@ -46,22 +46,6 @@ public:
 
 class sacd_dsf_t : public sacd_reader_t
 {
-    sacd_media_t *m_file;
-    int m_samplerate;
-    int m_channel_count;
-    uint64_t m_file_size;
-    vector<uint8_t> m_block_data;
-    int m_block_size;
-    int m_block_offset;
-    int m_block_data_end;
-    uint64_t m_sample_count;
-    uint64_t m_data_offset;
-    uint64_t m_data_size;
-    uint64_t m_data_end_offset;
-    uint64_t m_read_offset;
-    bool m_is_lsb;
-    uint64_t m_id3_offset;
-    uint8_t swap_bits[256];
 public:
     sacd_dsf_t();
 
@@ -84,6 +68,24 @@ public:
     string set_track(uint32_t track_number, area_id_e area_id, uint32_t offset) override;
 
     bool read_frame(uint8_t *frame_data, size_t *frame_size, frame_type_e *frame_type) override;
+
+private:
+    sacd_media_t *m_file;
+    int m_samplerate;
+    int m_channel_count;
+    uint64_t m_file_size;
+    vector<uint8_t> m_block_data;
+    int m_block_size;
+    int m_block_offset;
+    int m_block_data_end;
+    uint64_t m_sample_count;
+    uint64_t m_data_offset;
+    uint64_t m_data_size;
+    uint64_t m_data_end_offset;
+    uint64_t m_read_offset;
+    bool m_is_lsb;
+    uint64_t m_id3_offset;
+    uint8_t swap_bits[256];
 };
 
 #endif  // __SACD_DSF_H__

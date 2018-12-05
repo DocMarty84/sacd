@@ -52,4 +52,4 @@ public:
 
 #pragma pack()
 
-#endif // __SACD_DSD_H__
+#endif  // __SACD_DSD_H__

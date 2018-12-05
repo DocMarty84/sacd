@@ -20,8 +20,8 @@
     along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
-#ifndef _SCARLETBOOK_H_INCLUDED
-#define _SCARLETBOOK_H_INCLUDED
+#ifndef __SCARLETBOOK_H__
+#define __SCARLETBOOK_H__
 
 #include <stdint.h>
 #include <string>
@@ -437,4 +437,5 @@ typedef struct
 } scarletbook_handle_t;
 
 #pragma pack()
-#endif
+
+#endif  // __SCARLETBOOK_H__

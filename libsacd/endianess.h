@@ -28,4 +28,4 @@
 #define SWAP16(x) x = (hton16(x))
 #define SWAP32(x) x = (hton32(x))
 
-#endif // __ENDIANESS_H__
+#endif  // __ENDIANESS_H__

@@ -41,22 +41,6 @@ typedef struct
 
 class sacd_disc_t : public sacd_reader_t
 {
-private:
-    sacd_media_t *m_file;
-    scarletbook_handle_t m_sb;
-    area_id_e m_track_area;
-    uint32_t m_track_start_lsn;
-    uint32_t m_track_length_lsn;
-    uint32_t m_track_current_lsn;
-    uint8_t m_channel_count;
-    audio_sector_t m_audio_sector;
-    audio_frame_t m_frame;
-    int m_packet_info_idx;
-    uint8_t m_sector_buffer[SACD_PSN_SIZE];
-    uint32_t m_sector_size;
-    int m_sector_bad_reads;
-    uint8_t *m_buffer;
-    int m_buffer_offset;
 public:
     sacd_disc_t();
 
@@ -85,6 +69,22 @@ public:
     bool read_blocks_raw(uint32_t lb_start, size_t block_count, uint8_t *data);
 
 private:
+    sacd_media_t *m_file;
+    scarletbook_handle_t m_sb;
+    area_id_e m_track_area;
+    uint32_t m_track_start_lsn;
+    uint32_t m_track_length_lsn;
+    uint32_t m_track_current_lsn;
+    uint8_t m_channel_count;
+    audio_sector_t m_audio_sector;
+    audio_frame_t m_frame;
+    int m_packet_info_idx;
+    uint8_t m_sector_buffer[SACD_PSN_SIZE];
+    uint32_t m_sector_size;
+    int m_sector_bad_reads;
+    uint8_t *m_buffer;
+    int m_buffer_offset;
+
     bool read_master_toc();
 
     bool read_area_toc(int area_idx);
@@ -92,4 +92,4 @@ private:
     void free_area(scarletbook_area_t *area);
 };
 
-#endif // __SACD_DISC_H__
+#endif  // __SACD_DISC_H__

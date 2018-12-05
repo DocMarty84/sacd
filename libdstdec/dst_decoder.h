@@ -73,27 +73,34 @@
 class CDSTDecoder
 {
 public:
-
     CFrameHeader FrameHdr; // Contains frame based header information
     CCodedTable StrFilter; // Contains FIR-coef. compression data
     CCodedTable StrPtable; // Contains Ptable-entry compression data input stream.
     int P_one[2 * MAX_CHANNELS][AC_HISMAX]; // Probability table for arithmetic coder
-    ADataByte AData[MAX_DSDBYTES_INFRAME * MAX_CHANNELS]; // Contains the arithmetic coded bit stream of a complete frame
+    ADataByte AData[
+            MAX_DSDBYTES_INFRAME * MAX_CHANNELS]; // Contains the arithmetic coded bit stream of a complete frame
     int ADataLen; // Number of code bits contained in AData[]
     CStrData SD; // DST data stream
 
     CDSTDecoder();
+
     ~CDSTDecoder();
+
     int init(int channels, int fs44);
+
     int close();
-    int decode(uint8_t* DSTFrame, size_t frameSize, uint8_t* DSDFrame);
-    int unpack(uint8_t* DSTFrame, uint8_t* DSDFrame);
+
+    int decode(uint8_t *DSTFrame, size_t frameSize, uint8_t *DSDFrame);
+
+    int unpack(uint8_t *DSTFrame, uint8_t *DSDFrame);
 
 private:
-
     int16_t reverse7LSBs(int16_t c);
-    void fillTable4Bit(CSegment& S, uint8_t Table4Bit[MAX_CHANNELS][MAX_DSDBITS_INFRAME / 2]);
+
+    void fillTable4Bit(CSegment &S, uint8_t Table4Bit[MAX_CHANNELS][MAX_DSDBITS_INFRAME / 2]);
+
     void LT_InitCoefTablesI(int16_t ICoefI[2 * MAX_CHANNELS][16][256]);
+
     void LT_InitStatus(uint8_t Status[MAX_CHANNELS][16]);
 };
 
