@@ -40,7 +40,7 @@ struct TrackInfo
 };
 
 int g_nCPUs = 2;
-int g_nThreads = 2;
+unsigned long g_nThreads = 2;
 vector<TrackInfo> g_arrQueue;
 pthread_mutex_t g_hMutex = PTHREAD_MUTEX_INITIALIZER;
 string g_strOut;

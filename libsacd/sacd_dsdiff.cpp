@@ -65,11 +65,6 @@ float sacd_dsdiff_t::getProgress()
     return ((float)(m_file->get_position() - m_current_offset) * 100.0) / (float)m_current_size;
 }
 
-bool sacd_dsdiff_t::is_dst()
-{
-    return m_dst_encoded != 0;
-}
-
 int sacd_dsdiff_t::open(sacd_media_t* p_file)
 {
     m_file = p_file;
@@ -114,7 +109,6 @@ int sacd_dsdiff_t::open(sacd_media_t* p_file)
                 return 0;
             }
 
-            m_version = hton32(version);
         }
         else if (ck.has_id("PROP"))
         {
@@ -157,17 +151,13 @@ int sacd_dsdiff_t::open(sacd_media_t* p_file)
 
                     switch (m_channel_count)
                     {
-                        case 2:
-                            m_loudspeaker_config = 0;
+                        case 2:;
                             break;
-                        case 5:
-                            m_loudspeaker_config = 3;
+                        case 5:;
                             break;
-                        case 6:
-                            m_loudspeaker_config = 4;
+                        case 6:;
                             break;
-                        default:
-                            m_loudspeaker_config = 65535;
+                        default:;
                             break;
                     }
 
@@ -201,12 +191,10 @@ int sacd_dsdiff_t::open(sacd_media_t* p_file)
                         return 0;
                     }
 
-                    m_loudspeaker_config = hton16(loudspeaker_config);
                     m_file->skip(ck.get_size() - sizeof(loudspeaker_config));
                 }
                 else if (ck.has_id("ID3 "))
                 {
-                    t_old.index  = 0;
                     t_old.offset = m_file->get_position();
                     t_old.size   = ck.get_size();
                     t_old.data.resize((uint32_t)ck.get_size());
@@ -357,7 +345,7 @@ int sacd_dsdiff_t::open(sacd_media_t* p_file)
         else if (ck.has_id("ID3 "))
         {
             id3tags_t t;
-            t.index  = m_id3tags.size();
+            m_id3tags.size();
             t.offset = m_file->get_position();
             t.size = ck.get_size();
             t.data.resize((uint32_t)ck.get_size());

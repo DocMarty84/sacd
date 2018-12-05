@@ -18,8 +18,8 @@
     along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
-#ifndef _SACD_DSF_H_INCLUDED
-#define _SACD_DSF_H_INCLUDED
+#ifndef __SACD_DSF_H__
+#define __SACD_DSF_H__
 
 #include <stdint.h>
 #include <vector>
@@ -33,7 +33,6 @@
 class FmtDSFChunk : public Chunk
 {
 public:
-    uint32_t format_version;
     uint32_t format_id;
     uint32_t channel_type;
     uint32_t channel_count;
@@ -41,17 +40,15 @@ public:
     uint32_t bits_per_sample;
     uint64_t sample_count;
     uint32_t block_size;
-    uint32_t reserved;
 };
 
 #pragma pack()
 
 class sacd_dsf_t : public sacd_reader_t
 {
-    sacd_media_t* m_file;
+    sacd_media_t *m_file;
     int m_samplerate;
     int m_channel_count;
-    int m_loudspeaker_config;
     uint64_t m_file_size;
     vector<uint8_t> m_block_data;
     int m_block_size;
@@ -64,21 +61,29 @@ class sacd_dsf_t : public sacd_reader_t
     uint64_t m_read_offset;
     bool m_is_lsb;
     uint64_t m_id3_offset;
-    vector<uint8_t> m_id3_data;
     uint8_t swap_bits[256];
 public:
     sacd_dsf_t();
-    ~sacd_dsf_t();
-    uint32_t get_track_count(area_id_e area_id = AREA_BOTH);
-    int get_channels();
-    int get_samplerate();
-    int get_framerate();
-    float getProgress();
-    bool is_dst();
-    int open(sacd_media_t* p_file);
-    bool close();
-    string set_track(uint32_t track_number, area_id_e area_id = AREA_BOTH, uint32_t offset = 0);
-    bool read_frame(uint8_t* frame_data, size_t* frame_size, frame_type_e* frame_type);
+
+    ~sacd_dsf_t() override;
+
+    uint32_t get_track_count(area_id_e area_id) override;
+
+    int get_channels() override;
+
+    int get_samplerate() override;
+
+    int get_framerate() override;
+
+    float getProgress() override;
+
+    int open(sacd_media_t *p_file) override;
+
+    bool close() override;
+
+    string set_track(uint32_t track_number, area_id_e area_id, uint32_t offset) override;
+
+    bool read_frame(uint8_t *frame_data, size_t *frame_size, frame_type_e *frame_type) override;
 };
 
-#endif
+#endif  // __SACD_DSF_H__

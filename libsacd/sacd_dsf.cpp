@@ -21,16 +21,14 @@
 #include "sacd_dsf.h"
 
 #define MARK_TIME(m) ((double)m.hours * 60 * 60 + (double)m.minutes * 60 + (double)m.seconds + ((double)m.samples + (double)m.offset) / (double)m_samplerate)
-#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MIN(a, b) (((a)<(b))?(a):(b))
 
 sacd_dsf_t::sacd_dsf_t()
 {
-    for (int i = 0; i < 256; i++)
-    {
+    for (int i = 0; i < 256; i++) {
         swap_bits[i] = 0;
 
-        for (int j = 0; j < 8; j++)
-        {
+        for (int j = 0; j < 8; j++) {
             swap_bits[i] |= ((i >> j) & 1) << (7 - j);
         }
     }
@@ -43,8 +41,8 @@ sacd_dsf_t::~sacd_dsf_t()
 
 uint32_t sacd_dsf_t::get_track_count(area_id_e area_id)
 {
-    if ((area_id == AREA_TWOCH && m_channel_count <= 2) || (area_id == AREA_MULCH && m_channel_count > 2) || area_id == AREA_BOTH)
-    {
+    if ((area_id == AREA_TWOCH && m_channel_count <= 2) || (area_id == AREA_MULCH && m_channel_count > 2) ||
+        area_id == AREA_BOTH) {
         return 1;
     }
 
@@ -68,45 +66,35 @@ int sacd_dsf_t::get_framerate()
 
 float sacd_dsf_t::getProgress()
 {
-    return ((float)(m_file->get_position() - m_read_offset) * 100.0) / (float)m_data_size;
+    return ((float) (m_file->get_position() - m_read_offset) * 100.0f) / (float) m_data_size;
 }
 
-bool sacd_dsf_t::is_dst()
-{
-    return false;
-}
-
-int sacd_dsf_t::open(sacd_media_t* p_file)
+int sacd_dsf_t::open(sacd_media_t *p_file)
 {
     m_file = p_file;
-    Chunk ck;
-    FmtDSFChunk fmt;
+    Chunk ck{};
+    FmtDSFChunk fmt{};
     uint64_t pos;
 
-    if (!(m_file->read(&ck, sizeof(ck)) == sizeof(ck) && ck.has_id("DSD ")))
-    {
+    if (!(m_file->read(&ck, sizeof(ck)) == sizeof(ck) && ck.has_id("DSD "))) {
         return false;
     }
 
-    if (ck.get_size() != hton64((uint64_t)28))
-    {
+    if (ck.get_size() != hton64((uint64_t) 28)) {
         return false;
     }
 
-    if (m_file->read(&m_file_size, sizeof(m_file_size)) != sizeof(m_file_size))
-    {
+    if (m_file->read(&m_file_size, sizeof(m_file_size)) != sizeof(m_file_size)) {
         return false;
     }
 
-    if (m_file->read(&m_id3_offset, sizeof(m_id3_offset)) != sizeof(m_id3_offset))
-    {
+    if (m_file->read(&m_id3_offset, sizeof(m_id3_offset)) != sizeof(m_id3_offset)) {
         return false;
     }
 
     pos = m_file->get_position();
 
-    if (!(m_file->read(&fmt, sizeof(fmt)) == sizeof(fmt) && fmt.has_id("fmt ")))
-    {
+    if (!(m_file->read(&fmt, sizeof(fmt)) == sizeof(fmt) && fmt.has_id("fmt "))) {
         return false;
     }
 
@@ -114,53 +102,22 @@ int sacd_dsf_t::open(sacd_media_t* p_file)
         return false;
     }
 
-    switch (fmt.channel_type)
-    {
-        case 1:
-            m_loudspeaker_config = 5;
-            break;
-        case 2:
-            m_loudspeaker_config = 0;
-            break;
-        case 3:
-            m_loudspeaker_config = 6;
-            break;
-        case 4:
-            m_loudspeaker_config = 1;
-            break;
-        case 5:
-            m_loudspeaker_config = 2;
-            break;
-        case 6:
-            m_loudspeaker_config = 3;
-            break;
-        case 7:
-            m_loudspeaker_config = 4;
-            break;
-        default:
-            m_loudspeaker_config = 65535;
-            break;
-    }
-
-    if (fmt.channel_count < 1 || fmt.channel_count > 6)
-    {
+    if (fmt.channel_count < 1 || fmt.channel_count > 6) {
         return false;
     }
 
     m_channel_count = fmt.channel_count;
     m_samplerate = fmt.samplerate;
 
-    switch (fmt.bits_per_sample)
-    {
-        case 1:
-            m_is_lsb = true;
-            break;
-        case 8:
-            m_is_lsb = false;
-            break;
-        default:
-            return false;
-            break;
+    switch (fmt.bits_per_sample) {
+    case 1:
+        m_is_lsb = true;
+        break;
+    case 8:
+        m_is_lsb = false;
+        break;
+    default:
+        return false;
     }
 
     m_sample_count = fmt.sample_count;
@@ -169,8 +126,7 @@ int sacd_dsf_t::open(sacd_media_t* p_file)
     m_block_data_end = 0;
     m_file->seek(pos + hton64(fmt.get_size()));
 
-    if (!(m_file->read(&ck, sizeof(ck)) == sizeof(ck) && ck.has_id("data")))
-    {
+    if (!(m_file->read(&ck, sizeof(ck)) == sizeof(ck) && ck.has_id("data"))) {
         return false;
     }
 
@@ -190,8 +146,7 @@ bool sacd_dsf_t::close()
 
 string sacd_dsf_t::set_track(uint32_t track_number, area_id_e area_id, uint32_t offset)
 {
-    if (track_number)
-    {
+    if (track_number) {
         return "";
     }
 
@@ -200,33 +155,26 @@ string sacd_dsf_t::set_track(uint32_t track_number, area_id_e area_id, uint32_t 
     return m_file->getFileName();
 }
 
-bool sacd_dsf_t::read_frame(uint8_t* frame_data, size_t* frame_size, frame_type_e* frame_type)
+bool sacd_dsf_t::read_frame(uint8_t *frame_data, size_t *frame_size, frame_type_e *frame_type)
 {
     int samples_read = 0;
 
-    for (int i = 0; i < (int)*frame_size / m_channel_count; i++)
-    {
-        if (m_block_offset * m_channel_count >= m_block_data_end)
-        {
-                m_block_data_end = (int)MIN(m_data_end_offset - m_file->get_position(), m_block_data.size());
+    for (int i = 0; i < (int) *frame_size / m_channel_count; i++) {
+        if (m_block_offset * m_channel_count >= m_block_data_end) {
+            m_block_data_end = (int) MIN(m_data_end_offset - m_file->get_position(), m_block_data.size());
 
-            if (m_block_data_end > 0)
-            {
+            if (m_block_data_end > 0) {
                 m_block_data_end = m_file->read(m_block_data.data(), m_block_data_end);
             }
 
-            if (m_block_data_end > 0)
-            {
+            if (m_block_data_end > 0) {
                 m_block_offset = 0;
-            }
-            else
-            {
+            } else {
                 break;
             }
         }
 
-        for (int ch = 0; ch < m_channel_count; ch++)
-        {
+        for (int ch = 0; ch < m_channel_count; ch++) {
             uint8_t b = m_block_data.data()[ch * m_block_size + m_block_offset];
             frame_data[i * m_channel_count + ch] = m_is_lsb ? swap_bits[b] : b;
         }

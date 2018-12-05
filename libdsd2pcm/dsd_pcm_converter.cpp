@@ -170,8 +170,6 @@ int DSDPCMConverter::convert(uint8_t *dsd_data, int dsd_samples, float *pcm_data
     int pcm_samples = 0;
 
     if (!dsd_data) {
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "OCDFAInspection"
         for (int sample = 0; sample < dsd_samples / 2; sample++) {
             uint8_t temp = dsd_data[dsd_samples - 1 - sample];
             dsd_data[dsd_samples - 1 - sample] = swap_bits[dsd_data[sample]];
@@ -179,7 +177,6 @@ int DSDPCMConverter::convert(uint8_t *dsd_data, int dsd_samples, float *pcm_data
         }
 
         return convertResample(dsd_data, dsd_samples, pcm_data);
-#pragma clang diagnostic pop
     }
 
     if (!conv_called) {

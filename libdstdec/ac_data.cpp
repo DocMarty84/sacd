@@ -66,151 +66,57 @@
 
 #define PBITS AC_BITS //number of bits for Probabilities
 #define NBITS 4 //number of overhead bits: must be at least 2! Maximum "variable shift length" is (NBITS-1)
-#define PSUM (1 << (PBITS))
 #define ABITS (PBITS + NBITS) // must be at least PBITS+2
-#define MB 0 // if (MB) print max buffer use
 #define ONE (1 << ABITS)
 #define HALF (1 << (ABITS - 1))
 
 int CACData::getPtableIndex(long PredicVal, int PtableLen)
 {
-    int j = (PredicVal > 0 ? PredicVal : -PredicVal) >> AC_QSTEP;
+    int j = (PredicVal > 0 ? static_cast<int>(PredicVal) : static_cast<int>(-PredicVal)) >> AC_QSTEP;
 
-    if (j >= PtableLen)
-    {
+    if (j >= PtableLen) {
         j = PtableLen - 1;
     }
 
     return j;
 }
 
-void CACData::decodeBit(uint8_t& b, int p, uint8_t* cb, int fs, int flush)
+void CACData::decodeBit_Init(ADataByte *cb, int fs)
 {
-    unsigned int ap;
-    unsigned int h;
-
-    if (Init == 1)
-    {
-        Init = 0;
-        A = ONE - 1;
-        C = 0;
-
-        for (cbptr = 1; cbptr <= ABITS; cbptr++)
-        {
-            C <<= 1;
-
-            if (cbptr < fs)
-            {
-                C |= cb[cbptr];
-            }
-        }
-    }
-
-    if (flush == 0)
-    {
-        // approximate (A * p) with "partial rounding".
-        ap = ((A >> PBITS) | ((A >> (PBITS - 1)) & 1)) * p;
-        h = A - ap;
-
-        if (C >= h)
-        {
-            b = 0;
-            C -= h;
-            A = ap;
-        }
-        else
-        {
-            b = 1;
-            A = h;
-        }
-
-        while (A < HALF)
-        {
-            A <<= 1;
-
-            // Use new flushing technique; insert zero in LSB of C if reading past the end of the arithmetic code
-            C <<= 1;
-
-            if (cbptr < fs)
-            {
-                C |= cb[cbptr];
-            }
-
-            cbptr++;
-        }
-    }
-    else
-    {
-        Init = 1;
-
-        if (cbptr < fs - 7)
-        {
-            b = 0;
-        }
-        else
-        {
-            b = 1;
-
-            while ((cbptr < fs) && (b == 1))
-            {
-                if (cb[cbptr] != 0)
-                {
-                    b = 1;
-                }
-
-                cbptr++;
-            }
-        }
-    }
-}
-
-void CACData::decodeBit_Init(ADataByte* cb, int fs)
-{
-    Init = 0;
     A = ONE - 1;
     C = 0;
 
-    for (cbptr = 1; cbptr <= ABITS; cbptr++)
-    {
+    for (cbptr = 1; cbptr <= ABITS; cbptr++) {
         C <<= 1;
 
-        if (cbptr < fs)
-        {
+        if (cbptr < fs) {
             C |= GET_BIT(cb, cbptr);
         }
     }
 }
 
-void CACData::decodeBit_Decode(uint8_t* b, int p, ADataByte* cb, int fs)
+void CACData::decodeBit_Decode(uint8_t *b, int p, ADataByte *cb, int fs)
 {
-    unsigned int ap;
-    unsigned int h;
-
     // approximate (A * p) with "partial rounding".
-    ap = ((A >> PBITS) | ((A >> (PBITS - 1)) & 1)) * p;
-    h = A - ap;
+    unsigned int ap = ((A >> PBITS) | ((A >> (PBITS - 1)) & 1)) * p;
+    unsigned int h = A - ap;
 
-    if (C >= h)
-    {
+    if (C >= h) {
         *b = 0;
         C -= h;
         A = ap;
-    }
-    else
-    {
+    } else {
         *b = 1;
         A = h;
     }
 
-    while (A < HALF)
-    {
+    while (A < HALF) {
         A <<= 1;
 
         // Use new flushing technique; insert zero in LSB of C if reading past the end of the arithmetic code
         C <<= 1;
 
-        if (cbptr < fs)
-        {
+        if (cbptr < fs) {
             C |= GET_BIT(cb, cbptr);
         }
 
@@ -218,25 +124,17 @@ void CACData::decodeBit_Decode(uint8_t* b, int p, ADataByte* cb, int fs)
     }
 }
 
-void CACData::decodeBit_Flush(uint8_t* b, int p, ADataByte* cb, int fs)
+void CACData::decodeBit_Flush(uint8_t *b, ADataByte *cb, int fs)
 {
-    Init = 1;
-
-    if (cbptr < fs - 7)
-    {
+    if (cbptr < fs - 7) {
         *b = 0;
-    }
-    else
-    {
+    } else {
         *b = 1;
 
-        while ((cbptr < fs) && (*b == 1))
-        {
-            if (GET_BIT(cb, cbptr) != 0)
-            {
+        while ((cbptr < fs) && (*b == 1)) {
+            if (GET_BIT(cb, cbptr) != 0) {
                 *b = 1;
             }
-
             cbptr++;
         }
     }

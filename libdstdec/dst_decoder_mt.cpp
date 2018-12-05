@@ -24,9 +24,9 @@
 
 void* DSTDecoderThread(void* threadarg)
 {
-    frame_slot_t* frame_slot = (frame_slot_t*)threadarg;
+    auto * frame_slot = (frame_slot_t*)threadarg;
 
-    while (1)
+    while (true)
     {
         pthread_mutex_lock(&frame_slot->hMutex);
 
@@ -40,7 +40,7 @@ void* DSTDecoderThread(void* threadarg)
             frame_slot->dsd_data = nullptr;
             frame_slot->dst_size = 0;
             pthread_mutex_unlock(&frame_slot->hMutex);
-            return 0;
+            return nullptr;
         }
 
         frame_slot->state = SLOT_RUNNING;
@@ -64,8 +64,6 @@ void* DSTDecoderThread(void* threadarg)
         pthread_cond_signal(&frame_slot->hEventGet);
         pthread_mutex_unlock(&frame_slot->hMutex);
     }
-
-    return 0;
 }
 
 dst_decoder_t::dst_decoder_t(int threads)
@@ -118,8 +116,6 @@ int dst_decoder_t::init(int channel_count, int samplerate, int framerate)
         {
             frame_slot->channel_count = channel_count;
             frame_slot->samplerate = samplerate;
-            frame_slot->framerate = framerate;
-            frame_slot->dsd_size = (size_t)(samplerate / 8 / framerate * channel_count);
             pthread_mutex_init(&frame_slot->hMutex, nullptr);
             pthread_cond_init(&frame_slot->hEventGet, nullptr);
             pthread_cond_init(&frame_slot->hEventPut, nullptr);
@@ -149,7 +145,6 @@ int dst_decoder_t::decode(uint8_t* dst_data, size_t dst_size, uint8_t** dsd_data
     frame_slot->dsd_data = *dsd_data;
     frame_slot->dst_data = dst_data;
     frame_slot->dst_size = dst_size;
-    frame_slot->frame_nr = frame_nr;
 
     // Release worker (decoding) thread on the loaded slot
     if (dst_size > 0)

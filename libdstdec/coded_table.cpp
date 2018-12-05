@@ -66,45 +66,36 @@
 
 // CCP = Coding of Coefficients and Ptables
 // Initialize the prediction order and coefficients for prediction filter used to predict the filter coefficients.
-void CCodedTableBase::calcCCP()
+void CCodedTable::calcCCP()
 {
-    for (int i = 0; i < NROFFRICEMETHODS; i++)
-    {
-        for (int j = 0; j < MAXCPREDORDER; j++)
-        {
-            CPredCoef[i][j] = 0;
-        }
-    }
+    for (auto &i : CPredCoef)
+        for (int &j : i)
+            j = 0;
 
-    switch (TableType)
-    {
-        case T_FILTER:
-            CPredOrder[0] = 1;
-            CPredCoef[0][0] = -8;
-            CPredOrder[1] = 2;
-            CPredCoef[1][0] = -16;
-            CPredCoef[1][1] =  8;
-            CPredOrder[2] = 3;
-            CPredCoef[2][0] = -9;
-            CPredCoef[2][1] = -5;
-            CPredCoef[2][2] =  6;
-    #if NROFFRICEMETHODS == 4
-            CPredOrder[3] = 1;
-            CPredCoef[3][0] = 8;
-    #endif
-            break;
-        case T_PTABLE:
-            CPredOrder[0] = 1;
-            CPredCoef[0][0] = -8;
-            CPredOrder[1] = 2;
-            CPredCoef[1][0] = -16;
-            CPredCoef[1][1] =  8;
-            CPredOrder[2] = 3;
-            CPredCoef[2][0] = -24;
-            CPredCoef[2][1] =  24;
-            CPredCoef[2][2] = -8;
-            break;
-        default:
-            break;
+    switch (TableType) {
+    case T_FILTER:
+        CPredOrder[0] = 1;
+        CPredCoef[0][0] = -8;
+        CPredOrder[1] = 2;
+        CPredCoef[1][0] = -16;
+        CPredCoef[1][1] = 8;
+        CPredOrder[2] = 3;
+        CPredCoef[2][0] = -9;
+        CPredCoef[2][1] = -5;
+        CPredCoef[2][2] = 6;
+        break;
+    case T_PTABLE:
+        CPredOrder[0] = 1;
+        CPredCoef[0][0] = -8;
+        CPredOrder[1] = 2;
+        CPredCoef[1][0] = -16;
+        CPredCoef[1][1] = 8;
+        CPredOrder[2] = 3;
+        CPredCoef[2][0] = -24;
+        CPredCoef[2][1] = 24;
+        CPredCoef[2][2] = -8;
+        break;
+    default:
+        break;
     }
 }

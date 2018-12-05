@@ -62,8 +62,8 @@
     along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
-#ifndef FRAMEREADER_H
-#define FRAMEREADER_H
+#ifndef __FRAME_READER_H__
+#define __FRAME_READER_H__
 
 #include "coded_table.h"
 #include "str_data.h"
@@ -71,20 +71,34 @@
 class CFrameReader
 {
 public:
-
     static int log2RoundUp(long x);
-    static int RiceDecode(CStrData& SD, int m);
-    static void readDSDFrame(CStrData& SD, long MaxFrameLen, int NrOfChannels, uint8_t* DSDFrame);
-    static void readTableSegmentData(CStrData& SD, int NrOfChannels, int FrameLen, int MaxNrOfSegs, int MinSegLen, CSegment& S, int& SameSegAllCh);
-    static void copySegmentData(CFrameHeader& FH);
-    static void readSegmentData(CStrData& SD, CFrameHeader& FH);
-    static void readTableMappingData(CStrData& SD, int NrOfChannels, int MaxNrOfTables, CSegment& S, int& NrOfTables, int& SameMapAllCh);
-    static void copyMappingData(CFrameHeader& FH);
-    static void readMappingData(CStrData& SD, CFrameHeader& FH);
-    static void readFilterCoefSets(CStrData& SD, int NrOfChannels, CFrameHeader& FH, CCodedTableF& CF);
-    static void readProbabilityTables(CStrData& SD, CFrameHeader& FH, CCodedTableP& CP, int P_one[2 * MAX_CHANNELS][AC_HISMAX]);
-    static void readArithmeticCodedData(CStrData& SD, int ADataLen, ADataByte* AData);
+
+    static int RiceDecode(CStrData &SD, int m);
+
+    static void readDSDFrame(CStrData &SD, long MaxFrameLen, int NrOfChannels, uint8_t *DSDFrame);
+
+    static void
+    readTableSegmentData(CStrData &SD, int NrOfChannels, int FrameLen, int MaxNrOfSegs, int MinSegLen, CSegment &S,
+                         int &SameSegAllCh);
+
+    static void copySegmentData(CFrameHeader &FH);
+
+    static void readSegmentData(CStrData &SD, CFrameHeader &FH);
+
+    static void readTableMappingData(CStrData &SD, int NrOfChannels, int MaxNrOfTables, CSegment &S, int &NrOfTables,
+                                     int &SameMapAllCh);
+
+    static void copyMappingData(CFrameHeader &FH);
+
+    static void readMappingData(CStrData &SD, CFrameHeader &FH);
+
+    static void readFilterCoefSets(CStrData &SD, int NrOfChannels, CFrameHeader &FH, CCodedTable &CF);
+
+    static void
+    readProbabilityTables(CStrData &SD, CFrameHeader &FH, CCodedTable &CP, int P_one[2 * MAX_CHANNELS][AC_HISMAX]);
+
+    static void readArithmeticCodedData(CStrData &SD, int ADataLen, ADataByte *AData);
 };
 
 
-#endif
+#endif  // __FRAME_READER_H__

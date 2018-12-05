@@ -69,8 +69,7 @@ int CFrameReader::log2RoundUp(long x)
 {
     int y = 0;
 
-    while (x >= (1 << y))
-    {
+    while (x >= (1 << y)) {
         y++;
     }
 
@@ -78,7 +77,7 @@ int CFrameReader::log2RoundUp(long x)
 }
 
 // Read a Rice code from the DST file
-int CFrameReader::RiceDecode(CStrData& SD, int m)
+int CFrameReader::RiceDecode(CStrData &SD, int m)
 {
     int LSBs;
     int Nr;
@@ -89,8 +88,7 @@ int CFrameReader::RiceDecode(CStrData& SD, int m)
     // Retrieve run length code
     RunLength = 0;
 
-    do
-    {
+    do {
         SD.getIntUnsigned(1, RLBit);
         RunLength += (1 - RLBit);
     } while (!RLBit);
@@ -100,12 +98,10 @@ int CFrameReader::RiceDecode(CStrData& SD, int m)
     Nr = (RunLength << m) + LSBs;
 
     // Retrieve optional sign bit
-    if (Nr != 0)
-    {
+    if (Nr != 0) {
         SD.getIntUnsigned(1, Sign);
 
-        if (Sign)
-        {
+        if (Sign) {
             Nr = -Nr;
         }
     }
@@ -114,18 +110,18 @@ int CFrameReader::RiceDecode(CStrData& SD, int m)
 }
 
 // Read DSD signal of this frame from the DST input file
-void CFrameReader::readDSDFrame(CStrData& SD, long MaxFrameLen, int NrOfChannels, uint8_t* DSDFrame)
+void CFrameReader::readDSDFrame(CStrData &SD, long MaxFrameLen, int NrOfChannels, uint8_t *DSDFrame)
 {
-    int ByteMax = MaxFrameLen * NrOfChannels;
+    long ByteMax = MaxFrameLen * NrOfChannels;
 
-    for (int ByteNr = 0; ByteNr < ByteMax; ByteNr++)
-    {
+    for (int ByteNr = 0; ByteNr < ByteMax; ByteNr++) {
         SD.getChrUnsigned(8, DSDFrame[ByteNr]);
     }
 }
 
 // Read segmentation data for filters or Ptables
-void CFrameReader::readTableSegmentData(CStrData& SD, int NrOfChannels, int FrameLen, int MaxNrOfSegs, int MinSegLen, CSegment& S, int& SameSegAllCh)
+void CFrameReader::readTableSegmentData(CStrData &SD, int NrOfChannels, int FrameLen, int MaxNrOfSegs, int MinSegLen,
+                                        CSegment &S, int &SameSegAllCh)
 {
     int ChNr = 0;
     int DefinedBits = 0;
@@ -138,26 +134,21 @@ void CFrameReader::readTableSegmentData(CStrData& SD, int NrOfChannels, int Fram
     MaxSegSize = FrameLen - MinSegLen / 8;
     SD.getIntUnsigned(1, SameSegAllCh);
 
-    if (SameSegAllCh)
-    {
+    if (SameSegAllCh) {
         SD.getIntUnsigned(1, EndOfChannel);
 
-        while (!EndOfChannel)
-        {
-            if (SegNr >= MaxNrOfSegs)
-            {
+        while (!EndOfChannel) {
+            if (SegNr >= MaxNrOfSegs) {
                 printf("ERROR: Too many segments for this channel!");
 
                 return;
             }
 
-            if (!ResolRead)
-            {
+            if (!ResolRead) {
                 NrOfBits = log2RoundUp(FrameLen - MinSegLen / 8);
                 SD.getIntUnsigned(NrOfBits, S.Resolution);
 
-                if ((S.Resolution == 0) || (S.Resolution > FrameLen - MinSegLen / 8))
-                {
+                if ((S.Resolution == 0) || (S.Resolution > FrameLen - MinSegLen / 8)) {
                     printf("ERROR: Invalid segment resolution!");
 
                     return;
@@ -170,8 +161,8 @@ void CFrameReader::readTableSegmentData(CStrData& SD, int NrOfChannels, int Fram
 
             SD.getIntUnsigned(NrOfBits, S.SegmentLen[0][SegNr]);
 
-            if ((S.Resolution * 8 * S.SegmentLen[0][SegNr] < MinSegLen) || (S.Resolution * 8 * S.SegmentLen[0][SegNr] > FrameLen * 8 - DefinedBits - MinSegLen))
-            {
+            if ((S.Resolution * 8 * S.SegmentLen[0][SegNr] < MinSegLen) ||
+                (S.Resolution * 8 * S.SegmentLen[0][SegNr] > FrameLen * 8 - DefinedBits - MinSegLen)) {
                 printf("ERROR: Invalid segment length!");
 
                 return;
@@ -187,22 +178,16 @@ void CFrameReader::readTableSegmentData(CStrData& SD, int NrOfChannels, int Fram
         S.NrOfSegments[0] = SegNr + 1;
         S.SegmentLen[0][SegNr] = 0;
 
-        for (ChNr = 1; ChNr < NrOfChannels; ChNr++)
-        {
+        for (ChNr = 1; ChNr < NrOfChannels; ChNr++) {
             S.NrOfSegments[ChNr] = S.NrOfSegments[0];
 
-            for (SegNr = 0; SegNr < S.NrOfSegments[0]; SegNr++)
-            {
+            for (SegNr = 0; SegNr < S.NrOfSegments[0]; SegNr++) {
                 S.SegmentLen[ChNr][SegNr] = S.SegmentLen[0][SegNr];
             }
         }
-    }
-    else
-    {
-        while (ChNr < NrOfChannels)
-        {
-            if (SegNr >= MaxNrOfSegs)
-            {
+    } else {
+        while (ChNr < NrOfChannels) {
+            if (SegNr >= MaxNrOfSegs) {
                 printf("ERROR: Too many segments for this channel!");
 
                 return;
@@ -210,15 +195,12 @@ void CFrameReader::readTableSegmentData(CStrData& SD, int NrOfChannels, int Fram
 
             SD.getIntUnsigned(1, EndOfChannel);
 
-            if (!EndOfChannel)
-            {
-                if (!ResolRead)
-                {
+            if (!EndOfChannel) {
+                if (!ResolRead) {
                     NrOfBits = log2RoundUp(FrameLen - MinSegLen / 8);
                     SD.getIntUnsigned(NrOfBits, S.Resolution);
 
-                    if ((S.Resolution == 0) || (S.Resolution > FrameLen - MinSegLen / 8))
-                    {
+                    if ((S.Resolution == 0) || (S.Resolution > FrameLen - MinSegLen / 8)) {
                         printf("ERROR: Invalid segment resolution!");
 
                         return;
@@ -230,8 +212,8 @@ void CFrameReader::readTableSegmentData(CStrData& SD, int NrOfChannels, int Fram
                 NrOfBits = log2RoundUp(MaxSegSize / S.Resolution);
                 SD.getIntUnsigned(NrOfBits, S.SegmentLen[ChNr][SegNr]);
 
-                if ((S.Resolution * 8 * S.SegmentLen[ChNr][SegNr] < MinSegLen) || (S.Resolution * 8 * S.SegmentLen[ChNr][SegNr] > FrameLen * 8 - DefinedBits - MinSegLen))
-                {
+                if ((S.Resolution * 8 * S.SegmentLen[ChNr][SegNr] < MinSegLen) ||
+                    (S.Resolution * 8 * S.SegmentLen[ChNr][SegNr] > FrameLen * 8 - DefinedBits - MinSegLen)) {
                     printf("ERROR: Invalid segment length!");
 
                     return;
@@ -240,9 +222,7 @@ void CFrameReader::readTableSegmentData(CStrData& SD, int NrOfChannels, int Fram
                 DefinedBits += S.Resolution * 8 * S.SegmentLen[ChNr][SegNr];
                 MaxSegSize -= S.Resolution * S.SegmentLen[ChNr][SegNr];
                 SegNr++;
-            }
-            else
-            {
+            } else {
                 S.NrOfSegments[ChNr] = SegNr + 1;
                 S.SegmentLen[ChNr][SegNr] = 0;
                 SegNr = 0;
@@ -253,47 +233,41 @@ void CFrameReader::readTableSegmentData(CStrData& SD, int NrOfChannels, int Fram
         }
     }
 
-    if (!ResolRead)
-    {
+    if (!ResolRead) {
         S.Resolution = 1;
     }
 }
 
 // Copy segmentation data for filters and Ptables
-void CFrameReader::copySegmentData(CFrameHeader& FH)
+void CFrameReader::copySegmentData(CFrameHeader &FH)
 {
     FH.PSeg.Resolution = FH.FSeg.Resolution;
     FH.PSameSegAllCh = 1;
 
-    for (int ChNr = 0; ChNr < FH.NrOfChannels; ChNr++)
-    {
+    for (int ChNr = 0; ChNr < FH.NrOfChannels; ChNr++) {
         FH.PSeg.NrOfSegments[ChNr] = FH.FSeg.NrOfSegments[ChNr];
 
-        if (FH.PSeg.NrOfSegments[ChNr] > MAXNROF_PSEGS)
-        {
+        if (FH.PSeg.NrOfSegments[ChNr] > MAXNROF_PSEGS) {
             printf("ERROR: Too many segments!");
 
             return;
         }
 
-        if (FH.PSeg.NrOfSegments[ChNr] != FH.PSeg.NrOfSegments[0])
-        {
+        if (FH.PSeg.NrOfSegments[ChNr] != FH.PSeg.NrOfSegments[0]) {
             FH.PSameSegAllCh = 0;
         }
 
-        for (int SegNr = 0; SegNr < FH.FSeg.NrOfSegments[ChNr]; SegNr++)
-        {
+        for (int SegNr = 0; SegNr < FH.FSeg.NrOfSegments[ChNr]; SegNr++) {
             FH.PSeg.SegmentLen[ChNr][SegNr] = FH.FSeg.SegmentLen[ChNr][SegNr];
 
-            if ((FH.PSeg.SegmentLen[ChNr][SegNr] != 0) &&   (FH.PSeg.Resolution * 8 * FH.PSeg.SegmentLen[ChNr][SegNr] < MIN_PSEG_LEN))
-            {
+            if ((FH.PSeg.SegmentLen[ChNr][SegNr] != 0) &&
+                (FH.PSeg.Resolution * 8 * FH.PSeg.SegmentLen[ChNr][SegNr] < MIN_PSEG_LEN)) {
                 printf("ERROR: Invalid segment length!");
 
                 return;
             }
 
-            if (FH.PSeg.SegmentLen[ChNr][SegNr] != FH.PSeg.SegmentLen[0][SegNr])
-            {
+            if (FH.PSeg.SegmentLen[ChNr][SegNr] != FH.PSeg.SegmentLen[0][SegNr]) {
                 FH.PSameSegAllCh = 0;
             }
         }
@@ -301,81 +275,65 @@ void CFrameReader::copySegmentData(CFrameHeader& FH)
 }
 
 // Read segmentation data for filters and Ptables
-void CFrameReader::readSegmentData(CStrData& SD, CFrameHeader& FH)
+void CFrameReader::readSegmentData(CStrData &SD, CFrameHeader &FH)
 {
     SD.getIntUnsigned(1, FH.PSameSegAsF);
-    readTableSegmentData(SD, FH.NrOfChannels, FH.MaxFrameLen, MAXNROF_FSEGS, MIN_FSEG_LEN, FH.FSeg, FH.FSameSegAllCh);
+    readTableSegmentData(SD, FH.NrOfChannels, static_cast<int>(FH.MaxFrameLen), MAXNROF_FSEGS, MIN_FSEG_LEN, FH.FSeg,
+                         FH.FSameSegAllCh);
 
-    if (FH.PSameSegAsF == 1)
-    {
+    if (FH.PSameSegAsF == 1) {
         copySegmentData(FH);
-    }
-    else
-    {
-        readTableSegmentData(SD, FH.NrOfChannels, FH.MaxFrameLen, MAXNROF_PSEGS, MIN_PSEG_LEN, FH.PSeg, FH.PSameSegAllCh);
+    } else {
+        readTableSegmentData(SD, FH.NrOfChannels, static_cast<int>(FH.MaxFrameLen), MAXNROF_PSEGS, MIN_PSEG_LEN,
+                             FH.PSeg, FH.PSameSegAllCh);
     }
 }
 
 // Read mapping data for filters or Ptables
-void CFrameReader::readTableMappingData(CStrData& SD, int NrOfChannels, int MaxNrOfTables, CSegment& S, int& NrOfTables, int& SameMapAllCh)
+void CFrameReader::readTableMappingData(CStrData &SD, int NrOfChannels, int MaxNrOfTables, CSegment &S, int &NrOfTables,
+                                        int &SameMapAllCh)
 {
     int CountTables = 1;
-    int NrOfBits = 1;
+    int NrOfBits;
     S.Table4Segment[0][0] = 0;
 
     SD.getIntUnsigned(1, SameMapAllCh);
 
-    if (SameMapAllCh)
-    {
-        for (int SegNr = 1; SegNr < S.NrOfSegments[0]; SegNr++)
-        {
+    if (SameMapAllCh) {
+        for (int SegNr = 1; SegNr < S.NrOfSegments[0]; SegNr++) {
             NrOfBits = log2RoundUp(CountTables);
             SD.getIntUnsigned(NrOfBits, S.Table4Segment[0][SegNr]);
 
-            if (S.Table4Segment[0][SegNr] == CountTables)
-            {
+            if (S.Table4Segment[0][SegNr] == CountTables) {
                 CountTables++;
-            }
-            else if (S.Table4Segment[0][SegNr] > CountTables)
-            {
+            } else if (S.Table4Segment[0][SegNr] > CountTables) {
                 printf("ERROR: Invalid table number for segment!");
 
                 return;
             }
         }
 
-        for (int ChNr = 1; ChNr < NrOfChannels; ChNr++)
-        {
-            if (S.NrOfSegments[ChNr] != S.NrOfSegments[0])
-            {
+        for (int ChNr = 1; ChNr < NrOfChannels; ChNr++) {
+            if (S.NrOfSegments[ChNr] != S.NrOfSegments[0]) {
                 printf("ERROR: Mapping can't be the same for all channels!");
 
                 return;
             }
 
-            for (int SegNr = 0; SegNr < S.NrOfSegments[0]; SegNr++)
-            {
+            for (int SegNr = 0; SegNr < S.NrOfSegments[0]; SegNr++) {
                 S.Table4Segment[ChNr][SegNr] = S.Table4Segment[0][SegNr];
             }
         }
-    }
-    else
-    {
-        for (int ChNr = 0; ChNr < NrOfChannels; ChNr++)
-        {
-            for (int SegNr = 0; SegNr < S.NrOfSegments[ChNr]; SegNr++)
-            {
-                if ((ChNr != 0) || (SegNr != 0))
-                {
+    } else {
+        for (int ChNr = 0; ChNr < NrOfChannels; ChNr++) {
+            for (int SegNr = 0; SegNr < S.NrOfSegments[ChNr]; SegNr++) {
+                if ((ChNr != 0) || (SegNr != 0)) {
                     NrOfBits = log2RoundUp(CountTables);
                     SD.getIntUnsigned(NrOfBits, S.Table4Segment[ChNr][SegNr]);
 
-                    if (S.Table4Segment[ChNr][SegNr] == CountTables)
-                    {
+                    if (S.Table4Segment[ChNr][SegNr] == CountTables) {
                         CountTables++;
-                    }
-                    else if (S.Table4Segment[ChNr][SegNr] > CountTables)
-                    {
+                    } else if (S.Table4Segment[ChNr][SegNr] > CountTables) {
                         printf("ERROR: Invalid table number for segment!");
 
                         return;
@@ -385,8 +343,7 @@ void CFrameReader::readTableMappingData(CStrData& SD, int NrOfChannels, int MaxN
         }
     }
 
-    if (CountTables > MaxNrOfTables)
-    {
+    if (CountTables > MaxNrOfTables) {
         printf("ERROR: Too many tables for this frame!");
 
         return;
@@ -396,26 +353,20 @@ void CFrameReader::readTableMappingData(CStrData& SD, int NrOfChannels, int MaxN
 }
 
 // Copy mapping data for Ptables from the filter mapping
-void CFrameReader::copyMappingData(CFrameHeader& FH)
+void CFrameReader::copyMappingData(CFrameHeader &FH)
 {
     FH.PSameMapAllCh = 1;
 
-    for (int ChNr = 0; ChNr < FH.NrOfChannels; ChNr++)
-    {
-        if (FH.PSeg.NrOfSegments[ChNr] == FH.FSeg.NrOfSegments[ChNr])
-        {
-            for (int SegNr = 0; SegNr < FH.FSeg.NrOfSegments[ChNr]; SegNr++)
-            {
+    for (int ChNr = 0; ChNr < FH.NrOfChannels; ChNr++) {
+        if (FH.PSeg.NrOfSegments[ChNr] == FH.FSeg.NrOfSegments[ChNr]) {
+            for (int SegNr = 0; SegNr < FH.FSeg.NrOfSegments[ChNr]; SegNr++) {
                 FH.PSeg.Table4Segment[ChNr][SegNr] = FH.FSeg.Table4Segment[ChNr][SegNr];
 
-                if (FH.PSeg.Table4Segment[ChNr][SegNr] != FH.PSeg.Table4Segment[0][SegNr])
-                {
+                if (FH.PSeg.Table4Segment[ChNr][SegNr] != FH.PSeg.Table4Segment[0][SegNr]) {
                     FH.PSameMapAllCh = 0;
                 }
             }
-        }
-        else
-        {
+        } else {
             printf("ERROR: Not the same number of segments for filters and Ptables!");
 
             return;
@@ -424,8 +375,7 @@ void CFrameReader::copyMappingData(CFrameHeader& FH)
 
     FH.NrOfPtables = FH.NrOfFilters;
 
-    if (FH.NrOfPtables > FH.MaxNrOfPtables)
-    {
+    if (FH.NrOfPtables > FH.MaxNrOfPtables) {
         printf("ERROR: Too many tables for this frame!");
 
         return;
@@ -433,182 +383,145 @@ void CFrameReader::copyMappingData(CFrameHeader& FH)
 }
 
 // Read mapping data (which channel uses which filter/Ptable)
-void CFrameReader::readMappingData(CStrData& SD, CFrameHeader& FH)
+void CFrameReader::readMappingData(CStrData &SD, CFrameHeader &FH)
 {
     SD.getIntUnsigned(1, FH.PSameMapAsF);
     readTableMappingData(SD, FH.NrOfChannels, FH.MaxNrOfFilters, FH.FSeg, FH.NrOfFilters, FH.FSameMapAllCh);
 
-    if (FH.PSameMapAsF == 1)
-    {
+    if (FH.PSameMapAsF == 1) {
         copyMappingData(FH);
-    }
-    else
-    {
+    } else {
         readTableMappingData(SD, FH.NrOfChannels, FH.MaxNrOfPtables, FH.PSeg, FH.NrOfPtables, FH.PSameMapAllCh);
     }
 
-    for (int i = 0; i < FH.NrOfChannels; i++)
-    {
+    for (int i = 0; i < FH.NrOfChannels; i++) {
         SD.getIntUnsigned(1, FH.HalfProb[i]);
     }
 }
 
 // Read all filter data from the DST file, which contains: which channel uses which filter, for each filter: prediction order, all coefficients
-void CFrameReader::readFilterCoefSets(CStrData& SD, int NrOfChannels, CFrameHeader& FH, CCodedTableF& CF)
+void CFrameReader::readFilterCoefSets(CStrData &SD, int NrOfChannels, CFrameHeader &FH, CCodedTable &CF)
 {
     // Read the filter parameters
-    for (int FilterNr = 0; FilterNr < FH.NrOfFilters; FilterNr++)
-    {
+    for (int FilterNr = 0; FilterNr < FH.NrOfFilters; FilterNr++) {
         SD.getIntUnsigned(SIZE_CODEDPREDORDER, FH.PredOrder[FilterNr]);
         FH.PredOrder[FilterNr]++;
         SD.getIntUnsigned(1, CF.Coded[FilterNr]);
 
-        if (!CF.Coded[FilterNr])
-        {
+        if (!CF.Coded[FilterNr]) {
             CF.BestMethod[FilterNr] = -1;
 
-            for (int CoefNr = 0; CoefNr < FH.PredOrder[FilterNr]; CoefNr++)
-            {
+            for (int CoefNr = 0; CoefNr < FH.PredOrder[FilterNr]; CoefNr++) {
                 SD.getShortSigned(SIZE_PREDCOEF, FH.ICoefA[FilterNr][CoefNr]);
             }
-        }
-        else
-        {
+        } else {
             SD.getIntUnsigned(SIZE_RICEMETHOD, CF.BestMethod[FilterNr]);
 
             int bestmethod = CF.BestMethod[FilterNr];
 
-            if (CF.CPredOrder[bestmethod] >= FH.PredOrder[FilterNr])
-            {
+            if (CF.CPredOrder[bestmethod] >= FH.PredOrder[FilterNr]) {
                 printf("ERROR: Invalid coefficient coding method!");
 
                 return;
             }
 
-            for (int CoefNr = 0; CoefNr < CF.CPredOrder[bestmethod]; CoefNr++)
-            {
+            for (int CoefNr = 0; CoefNr < CF.CPredOrder[bestmethod]; CoefNr++) {
                 SD.getShortSigned(SIZE_PREDCOEF, FH.ICoefA[FilterNr][CoefNr]);
             }
 
             SD.getIntUnsigned(SIZE_RICEM, CF.m[FilterNr][bestmethod]);
 
-            for (int CoefNr = CF.CPredOrder[bestmethod]; CoefNr < FH.PredOrder[FilterNr]; CoefNr++)
-            {
+            for (int CoefNr = CF.CPredOrder[bestmethod]; CoefNr < FH.PredOrder[FilterNr]; CoefNr++) {
                 int x = 0;
                 int c;
 
-                for (int TapNr = 0; TapNr < CF.CPredOrder[bestmethod]; TapNr++)
-                {
+                for (int TapNr = 0; TapNr < CF.CPredOrder[bestmethod]; TapNr++) {
                     x += CF.CPredCoef[bestmethod][TapNr] * FH.ICoefA[FilterNr][CoefNr - TapNr - 1];
                 }
 
-                if (x >= 0)
-                {
+                if (x >= 0) {
                     c = RiceDecode(SD, CF.m[FilterNr][bestmethod]) - (x + 4) / 8;
-                }
-                else
-                {
+                } else {
                     c = RiceDecode(SD, CF.m[FilterNr][bestmethod]) + (-x + 3) / 8;
                 }
 
-                if ((c < -(1 << (SIZE_PREDCOEF - 1))) || (c >= (1 << (SIZE_PREDCOEF - 1))))
-                {
+                if ((c < -(1 << (SIZE_PREDCOEF - 1))) || (c >= (1 << (SIZE_PREDCOEF - 1)))) {
                     printf("ERROR: filter coefficient out of range!");
 
                     return;
-                }
-                else
-                {
-                    FH.ICoefA[FilterNr][CoefNr] = (int16_t)c;
+                } else {
+                    FH.ICoefA[FilterNr][CoefNr] = (int16_t) c;
                 }
             }
         }
     }
 
-    for (int ChNr = 0; ChNr < NrOfChannels; ChNr++)
-    {
+    for (int ChNr = 0; ChNr < NrOfChannels; ChNr++) {
         FH.NrOfHalfBits[ChNr] = FH.PredOrder[FH.FSeg.Table4Segment[ChNr][0]];
     }
 }
 
 // Read all Ptable data from the DST file, which contains: which channel uses which Ptable, for each Ptable all entries
-void CFrameReader::readProbabilityTables(CStrData& SD, CFrameHeader& FH, CCodedTableP& CP, int P_one[2 * MAX_CHANNELS][AC_HISMAX])
+void CFrameReader::readProbabilityTables(CStrData &SD, CFrameHeader &FH, CCodedTable &CP,
+                                         int P_one[2 * MAX_CHANNELS][AC_HISMAX])
 {
     // Read the data of all probability tables (table entries)
-    for (int PtableNr = 0; PtableNr < FH.NrOfPtables; PtableNr++)
-    {
+    for (int PtableNr = 0; PtableNr < FH.NrOfPtables; PtableNr++) {
         SD.getIntUnsigned(AC_HISBITS, FH.PtableLen[PtableNr]);
         FH.PtableLen[PtableNr]++;
 
-        if (FH.PtableLen[PtableNr] > 1)
-        {
+        if (FH.PtableLen[PtableNr] > 1) {
             SD.getIntUnsigned(1, CP.Coded[PtableNr]);
 
-            if (!CP.Coded[PtableNr])
-            {
+            if (!CP.Coded[PtableNr]) {
                 CP.BestMethod[PtableNr] = -1;
 
-                for (int EntryNr = 0; EntryNr < FH.PtableLen[PtableNr]; EntryNr++)
-                {
+                for (int EntryNr = 0; EntryNr < FH.PtableLen[PtableNr]; EntryNr++) {
                     SD.getIntUnsigned(AC_BITS - 1, P_one[PtableNr][EntryNr]);
                     P_one[PtableNr][EntryNr]++;
                 }
-            }
-            else
-            {
+            } else {
                 SD.getIntUnsigned(SIZE_RICEMETHOD, CP.BestMethod[PtableNr]);
 
                 int bestmethod = CP.BestMethod[PtableNr];
 
-                if (CP.CPredOrder[bestmethod] >= FH.PtableLen[PtableNr])
-                {
+                if (CP.CPredOrder[bestmethod] >= FH.PtableLen[PtableNr]) {
                     printf("ERROR: Invalid Ptable coding method!");
 
                     return;
                 }
 
-                for (int EntryNr = 0; EntryNr < CP.CPredOrder[bestmethod]; EntryNr++)
-                {
+                for (int EntryNr = 0; EntryNr < CP.CPredOrder[bestmethod]; EntryNr++) {
                     SD.getIntUnsigned(AC_BITS - 1, P_one[PtableNr][EntryNr]);
                     P_one[PtableNr][EntryNr]++;
                 }
 
                 SD.getIntUnsigned(SIZE_RICEM, CP.m[PtableNr][bestmethod]);
 
-                for (int EntryNr = CP.CPredOrder[bestmethod]; EntryNr < FH.PtableLen[PtableNr]; EntryNr++)
-                {
+                for (int EntryNr = CP.CPredOrder[bestmethod]; EntryNr < FH.PtableLen[PtableNr]; EntryNr++) {
                     int x = 0;
                     int c;
 
-                    for (int TapNr = 0; TapNr < CP.CPredOrder[bestmethod]; TapNr++)
-                    {
+                    for (int TapNr = 0; TapNr < CP.CPredOrder[bestmethod]; TapNr++) {
                         x += CP.CPredCoef[bestmethod][TapNr] * P_one[PtableNr][EntryNr - TapNr - 1];
                     }
 
-                    if (x >= 0)
-                    {
+                    if (x >= 0) {
                         c = RiceDecode(SD, CP.m[PtableNr][bestmethod]) - (x + 4) / 8;
-                    }
-                    else
-                    {
+                    } else {
                         c = RiceDecode(SD, CP.m[PtableNr][bestmethod]) + (-x + 3) / 8;
                     }
 
-                    if ((c < 1) || (c > (1 << (AC_BITS - 1))))
-                    {
+                    if ((c < 1) || (c > (1 << (AC_BITS - 1)))) {
                         printf("ERROR: Ptable entry out of range!");
 
                         return;
-                    }
-                    else
-                    {
+                    } else {
                         P_one[PtableNr][EntryNr] = c;
                     }
                 }
             }
-        }
-        else
-        {
+        } else {
             P_one[PtableNr][0] = 128;
             CP.BestMethod[PtableNr] = -1;
         }
@@ -616,10 +529,9 @@ void CFrameReader::readProbabilityTables(CStrData& SD, CFrameHeader& FH, CCodedT
 }
 
 // Read arithmetic coded data from the DST file, which contains: length of the arithmetic code, all bits of the arithmetic code
-void CFrameReader::readArithmeticCodedData(CStrData& SD, int ADataLen, ADataByte* AData)
+void CFrameReader::readArithmeticCodedData(CStrData &SD, int ADataLen, ADataByte *AData)
 {
-    for (int j = 0; j < (ADataLen >> 3); j++)
-    {
+    for (int j = 0; j < (ADataLen >> 3); j++) {
         uint8_t v;
 
         SD.getChrUnsigned(8, v);
@@ -628,16 +540,14 @@ void CFrameReader::readArithmeticCodedData(CStrData& SD, int ADataLen, ADataByte
 
     uint8_t Val = 0;
 
-    for (int j = ADataLen & ~7; j < ADataLen; j++)
-    {
+    for (int j = ADataLen & ~7; j < ADataLen; j++) {
         uint8_t v;
 
         SD.getChrUnsigned(1, v);
 
         Val |= v << (7 - (j & 7));
 
-        if (j == ADataLen - 1)
-        {
+        if (j == ADataLen - 1) {
             AData[j >> 3] = Val;
             Val = 0;
         }

@@ -18,8 +18,8 @@
     along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
-#ifndef _SACD_DISC_H_INCLUDED
-#define _SACD_DISC_H_INCLUDED
+#ifndef __SACD_DISC_H__
+#define __SACD_DISC_H__
 
 #include <stdint.h>
 #include "endianess.h"
@@ -42,7 +42,7 @@ typedef struct
 class sacd_disc_t : public sacd_reader_t
 {
 private:
-    sacd_media_t* m_file;
+    sacd_media_t *m_file;
     scarletbook_handle_t m_sb;
     area_id_e m_track_area;
     uint32_t m_track_start_lsn;
@@ -55,28 +55,41 @@ private:
     uint8_t m_sector_buffer[SACD_PSN_SIZE];
     uint32_t m_sector_size;
     int m_sector_bad_reads;
-    uint8_t* m_buffer;
+    uint8_t *m_buffer;
     int m_buffer_offset;
 public:
-    static bool g_is_sacd(const char* p_path);
     sacd_disc_t();
-    ~sacd_disc_t();
-    scarletbook_area_t* get_area(area_id_e area_id);
-    uint32_t get_track_count(area_id_e area_id = AREA_BOTH);
-    int get_channels();
-    int get_samplerate();
-    int get_framerate();
-    float getProgress();
-    bool is_dst();
-    int open(sacd_media_t* p_file);
-    bool close();
-    string set_track(uint32_t track_number, area_id_e area_id = AREA_BOTH, uint32_t offset = 0);
-    bool read_frame(uint8_t* frame_data, size_t* frame_size, frame_type_e* frame_type);
-    bool read_blocks_raw(uint32_t lb_start, size_t block_count, uint8_t* data);
+
+    ~sacd_disc_t() override;
+
+    scarletbook_area_t *get_area(area_id_e area_id);
+
+    uint32_t get_track_count(area_id_e area_id) override;
+
+    int get_channels() override;
+
+    int get_samplerate() override;
+
+    int get_framerate() override;
+
+    float getProgress() override;
+
+    int open(sacd_media_t *p_file) override;
+
+    bool close() override;
+
+    string set_track(uint32_t track_number, area_id_e area_id, uint32_t offset) override;
+
+    bool read_frame(uint8_t *frame_data, size_t *frame_size, frame_type_e *frame_type) override;
+
+    bool read_blocks_raw(uint32_t lb_start, size_t block_count, uint8_t *data);
+
 private:
     bool read_master_toc();
+
     bool read_area_toc(int area_idx);
-    void free_area(scarletbook_area_t* area);
+
+    void free_area(scarletbook_area_t *area);
 };
 
-#endif
+#endif // __SACD_DISC_H__

@@ -19,8 +19,8 @@
 
 */
 
-#ifndef _ENDIANESS_H_INCLUDED
-#define _ENDIANESS_H_INCLUDED
+#ifndef __ENDIANESS_H__
+#define __ENDIANESS_H__
 
 #define hton16(x) ((((x) & 0xff00) >> 8) | (((x) & 0x00ff) << 8))
 #define hton32(x) ((((x) & 0xff000000) >> 24) | (((x) & 0x00ff0000) >> 8) | (((x) & 0x0000ff00) << 8) | (((x) & 0x000000ff) << 24))
@@ -28,4 +28,4 @@
 #define SWAP16(x) x = (hton16(x))
 #define SWAP32(x) x = (hton32(x))
 
-#endif
+#endif // __ENDIANESS_H__

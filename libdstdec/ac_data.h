@@ -62,25 +62,26 @@
     along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
-#ifndef ACDATA_H
-#define ACDATA_H
+#ifndef ___AC_DATA_H__
+#define ___AC_DATA_H__
 
 #include "dst_defs.h"
 
 class CACData
 {
-    unsigned int Init;
+public:
+    int getPtableIndex(long PredicVal, int PtableLen);
+
+    void decodeBit_Init(ADataByte *cb, int fs);
+
+    void decodeBit_Decode(uint8_t *b, int p, ADataByte *cb, int fs);
+
+    void decodeBit_Flush(uint8_t *b, ADataByte *cb, int fs);
+
+private:
     unsigned int C;
     unsigned int A;
     int cbptr;
-
-public:
-
-    int getPtableIndex(long PredicVal, int PtableLen);
-    void decodeBit(uint8_t& b, int p, uint8_t* cb, int fs, int flush);
-    void decodeBit_Init(ADataByte* cb, int fs);
-    void decodeBit_Decode(uint8_t* b, int p, ADataByte* cb, int fs);
-    void decodeBit_Flush(uint8_t* b, int p, ADataByte* cb, int fs);
 };
 
-#endif
+#endif  // ___AC_DATA_H__

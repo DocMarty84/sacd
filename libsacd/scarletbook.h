@@ -30,25 +30,11 @@ using namespace std;
 
 #define SACD_LSN_SIZE 2048
 #define SACD_SAMPLING_FREQUENCY 2822400
-#define START_OF_FILE_SYSTEM_AREA 0
 #define START_OF_MASTER_TOC 510
 #define MASTER_TOC_LEN 10
-#define MAX_AREA_TOC_SIZE_LSN 96
 #define MAX_LANGUAGE_COUNT 8
-#define MAX_CHANNEL_COUNT 6
-#define SAMPLES_PER_FRAME 588
-#define FRAME_SIZE_64 (SAMPLES_PER_FRAME * 64 / 8)
 #define SUPPORTED_VERSION_MAJOR 1
 #define SUPPORTED_VERSION_MINOR 20
-#define MAX_GENRE_COUNT 29
-#define MAX_CATEGORY_COUNT 3
-
-enum frame_format_t
-{
-    FRAME_FORMAT_DST = 0,
-    FRAME_FORMAT_DSD_3_IN_14 = 2,
-    FRAME_FORMAT_DSD_3_IN_16 = 3
-};
 
 enum character_set_t
 {
@@ -63,9 +49,7 @@ enum character_set_t
 };
 
 // string representation for character sets
-extern const char* character_set[];
-
-extern const char* album_genre[];
+extern const char *character_set[];
 
 enum genre_t
 {
@@ -108,8 +92,6 @@ enum category_t
     CATEGORY_JAPANESE = 2
 };
 
-extern const char* album_category[];
-
 enum track_type_t
 {
     TRACK_TYPE_TITLE = 0x01,
@@ -139,14 +121,14 @@ typedef struct
     uint16_t reserved;
     uint8_t genre; // genre_t
 }
-genre_table_t;
+        genre_table_t;
 
 //Language & character set
 typedef struct
 {
-  char language_code[2]; // ISO639-2 Language code
-  uint8_t character_set; // char_set_t, 1 (ISO 646)
-  uint8_t reserved;
+    char language_code[2]; // ISO639-2 Language code
+    uint8_t character_set; // char_set_t, 1 (ISO 646)
+    uint8_t reserved;
 } locale_table_t;
 
 // Master TOC
@@ -209,7 +191,7 @@ typedef struct
     uint16_t disc_artist_phonetic_position;
     uint16_t disc_publisher_phonetic_position;
     uint16_t disc_copyright_phonetic_position;
-    uint8_t  data[2000];
+    uint8_t data[2000];
 } master_sacd_text_t;
 
 typedef struct
@@ -337,17 +319,6 @@ typedef struct
 
 typedef struct
 {
-    char id[8]; // SACD_ACC, Access List
-    uint16_t entry_count;
-    uint8_t main_step_size;
-    uint8_t reserved01[5];
-    uint8_t main_access_list[6550][5];
-    uint8_t reserved02[2];
-    uint8_t detailed_access_list[32768];
-} area_access_list_t;
-
-typedef struct
-{
     char id[8]; // SACDTRL1
     uint32_t track_start_lsn[255];
     uint32_t track_length_lsn[255];
@@ -439,13 +410,13 @@ typedef struct
 
 typedef struct
 {
-    uint8_t* area_data;
-    area_toc_t* area_toc;
-    area_tracklist_offset_t* area_tracklist_offset;
-    area_tracklist_time_t* area_tracklist_time;
-    area_text_t* area_text;
+    uint8_t *area_data;
+    area_toc_t *area_toc;
+    area_tracklist_offset_t *area_tracklist_offset;
+    area_tracklist_time_t *area_tracklist_time;
+    area_text_t *area_text;
     area_track_text_t area_track_text[255]; // max of 255 supported tracks
-    area_isrc_genre_t* area_isrc_genre;
+    area_isrc_genre_t *area_isrc_genre;
     string description;
     string copyright;
     string description_phonetic;
@@ -454,14 +425,14 @@ typedef struct
 
 typedef struct
 {
-    void* sacd; // sacd_reader_t
-    uint8_t* master_data;
-    master_toc_t* master_toc;
-    master_man_t* master_man;
+    void *sacd{}; // sacd_reader_t
+    uint8_t *master_data{};
+    master_toc_t *master_toc{};
+    master_man_t *master_man{};
     master_text_t master_text;
-    int twoch_area_idx;
-    int mulch_area_idx;
-    int area_count;
+    int twoch_area_idx{};
+    int mulch_area_idx{};
+    int area_count{};
     scarletbook_area_t area[2];
 } scarletbook_handle_t;
 

@@ -64,11 +64,6 @@
 
 #include "str_data.h"
 
-void CStrData::getDSTDataPointer(uint8_t** pBuffer)
-{
-    *pBuffer = DSTdata;
-}
-
 void CStrData::resetReadingIndex()
 {
     BitPosition = 0;
@@ -76,25 +71,16 @@ void CStrData::resetReadingIndex()
     DataByte = 0;
 }
 
-void CStrData::createBuffer(int size)
+void CStrData::createBuffer(size_t size)
 {
-    if (size > (int)sizeof(DSTdata))
-    {
+    if (size > sizeof(DSTdata)) {
         TotalBytes = sizeof(DSTdata);
-    }
-    else
-    {
+    } else {
         TotalBytes = size;
     }
 }
 
-void CStrData::deleteBuffer()
-{
-    TotalBytes = 0;
-    resetReadingIndex();
-}
-
-void CStrData::fillBuffer(uint8_t* pBuf, int size)
+void CStrData::fillBuffer(uint8_t *pBuf, size_t size)
 {
     createBuffer(size);
     dst_memcpy(DSTdata, pBuf, TotalBytes);
@@ -105,22 +91,17 @@ void CStrData::fillBuffer(uint8_t* pBuf, int size)
 // function : Read a character as an unsigned number from file with a given number of bits.
 // pre : Len, x, output file must be open by having used getbits_init
 // post : The second variable in function call is filled with the unsigned character read
-void CStrData::getChrUnsigned(int length, uint8_t& x)
+void CStrData::getChrUnsigned(int length, uint8_t &x)
 {
     long tmp = 0;
 
-    if (length > 0)
-    {
+    if (length > 0) {
         getbits(tmp, length);
 
-        x = (unsigned char)tmp;
-    }
-    else if (length == 0)
-    {
+        x = (unsigned char) tmp;
+    } else if (length == 0) {
         x = 0;
-    }
-    else
-    {
+    } else {
         printf("ERROR: a negative number of bits allocated");
     }
 }
@@ -128,50 +109,17 @@ void CStrData::getChrUnsigned(int length, uint8_t& x)
 // function : Read an integer as an unsigned number from file with a given number of bits.
 // pre: Len, x, output file must be open by having used getbits_init
 // post     : The second variable in function call is filled with the unsigned integer read
-void CStrData::getIntUnsigned(int length, int& x)
+void CStrData::getIntUnsigned(int length, int &x)
 {
     long tmp = 0;
 
-    if (length > 0)
-    {
+    if (length > 0) {
         getbits(tmp, length);
 
-        x = (int)tmp;
-    }
-    else if (length == 0)
-    {
+        x = (int) tmp;
+    } else if (length == 0) {
         x = 0;
-    }
-    else
-    {
-        printf("ERROR: a negative number of bits allocated");
-    }
-}
-
-// function : Read an integer as a signed number from file with a given number of bits.
-// pre: Len, x, output file must be open by having used getbits_init
-// post: The second variable in function call is filled with the signed integer read
-void CStrData::getIntSigned(int length, int& x)
-{
-    long tmp = 0;
-
-    if (length > 0)
-    {
-        getbits(tmp, length);
-
-        x = (int)tmp;
-
-        if (x >= (1 << (length - 1)))
-        {
-            x -= (1 << length);
-        }
-    }
-    else if (length == 0)
-    {
-        x = 0;
-    }
-    else
-    {
+    } else {
         printf("ERROR: a negative number of bits allocated");
     }
 }
@@ -179,27 +127,21 @@ void CStrData::getIntSigned(int length, int& x)
 // function : Read a short integer as a signed number from file with a given number of bits.
 // pre: Len, x, output file must be open by having used getbits_init
 // post: The second variable in function call is filled with the signed short integer read
-void CStrData::getShortSigned(int length, short& x)
+void CStrData::getShortSigned(int length, short &x)
 {
     long tmp = 0;
 
-    if (length > 0)
-    {
+    if (length > 0) {
         getbits(tmp, length);
 
-        x = (short)tmp;
+        x = (short) tmp;
 
-        if (x >= (1 << (length - 1)))
-        {
+        if (x >= (1 << (length - 1))) {
             x -= (1 << length);
         }
-    }
-    else if (length == 0)
-    {
+    } else if (length == 0) {
         x = 0;
-    }
-    else
-    {
+    } else {
         printf("ERROR: a negative number of bits allocated");
     }
 }
@@ -215,18 +157,15 @@ int CStrData::get_in_bitcount()
 // function : Read bits from the bitstream and decrement the counter.
 // pre      : out_bitptr
 // post: m_ByteCounter, outword, returns EOF on EOF or 0 otherwise.
-int CStrData::getbits(long& outword, int out_bitptr)
+int CStrData::getbits(long &outword, int out_bitptr)
 {
-    const int masks[] = { 0, 1, 3, 7, 0xf, 0x1f, 0x3f, 0x7f, 0xff };
+    const int masks[] = {0, 1, 3, 7, 0xf, 0x1f, 0x3f, 0x7f, 0xff};
 
-    if (out_bitptr == 1)
-    {
-        if (BitPosition == 0)
-        {
+    if (out_bitptr == 1) {
+        if (BitPosition == 0) {
             DataByte = DSTdata[ByteCounter++];
 
-            if (ByteCounter > TotalBytes)
-            {
+            if (ByteCounter > TotalBytes) {
                 // EOF
                 return -1;
             }
@@ -242,16 +181,13 @@ int CStrData::getbits(long& outword, int out_bitptr)
 
     outword = 0;
 
-    while (out_bitptr > 0)
-    {
+    while (out_bitptr > 0) {
         int thisbits, mask, shift;
 
-        if (!BitPosition)
-        {
+        if (!BitPosition) {
             DataByte = DSTdata[ByteCounter++];
 
-            if (ByteCounter > TotalBytes)
-            {
+            if (ByteCounter > TotalBytes) {
                 // EOF
                 return -1;
             }
@@ -264,12 +200,9 @@ int CStrData::getbits(long& outword, int out_bitptr)
         mask = masks[thisbits] << shift;
         shift = (out_bitptr - thisbits) - shift;
 
-        if (shift <= 0)
-        {
+        if (shift <= 0) {
             outword |= ((DataByte & mask) >> -shift);
-        }
-        else
-        {
+        } else {
             outword |= ((DataByte & mask) << shift);
         }
 

@@ -62,28 +62,28 @@
     along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
-#ifndef DSTDEFS_H
-#define DSTDEFS_H
+#ifndef __DST_DEFS_H__
+#define __DST_DEFS_H__
 
 #include <memory.h>
 #include <stdint.h>
 #include "dst_consts.h"
 
-#define MIN(x,y) (((x) < (y)) ? (x) : (y))
-#define MAX(x,y) (((x) > (y)) ? (x) : (y))
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define GET_BIT(BitBase, BitIndex) ((((unsigned char*)BitBase)[BitIndex >> 3] >> (7 - (BitIndex & 7))) & 1)
 #define GET_NIBBLE(NibbleBase, NibbleIndex) ((((unsigned char*)NibbleBase)[NibbleIndex >> 1] >> ((NibbleIndex & 1) << 2)) & 0x0f)
 #define dst_memcpy(dst, src, size) ::memcpy(dst, src, size)
 #define dst_memset(dst, val, size) ::memset(dst, val, size)
 
-extern int log_printf(char* fmt, ...);
-enum ETTable { T_FILTER, T_PTABLE };
+enum ETTable
+{
+    T_FILTER, T_PTABLE
+};
 
 class CSegment
 {
-
 public:
-
     int Resolution; // Resolution for segments
     int SegmentLen[MAX_CHANNELS][MAXNROF_SEGS]; // SegmentLen[ChNr][SegmentNr]
     int NrOfSegments[MAX_CHANNELS]; // NrOfSegments[ChNr]
@@ -92,14 +92,11 @@ public:
 
 class CFrameHeader
 {
-
 public:
-
     int FrameNr; // Nr of frame that is currently processed
     int NrOfChannels; // Number of channels in the recording
     int NrOfFilters; // Number of filters used for this frame
     int NrOfPtables; // Number of Ptables used for this frame
-    int Fsample44; // Sample frequency 64, 128, 256
     int PredOrder[2 * MAX_CHANNELS]; // Prediction order used for this frame
     int PtableLen[2 * MAX_CHANNELS]; // Nr of Ptable entries used for this frame
     int16_t ICoefA[2 * MAX_CHANNELS][1 << SIZE_CODEDPREDORDER]; // Integer coefs for actual coding
@@ -118,15 +115,12 @@ public:
     int FSameMapAllCh; // 1 if all channels have same Filtermap
     int PSameSegAllCh; // 1 if all channels have same Ptablesegm.
     int PSameMapAllCh; // 1 if all channels have same Ptablemap
-    int SegAndMapBits; // Number of bits in the stream for Seg&Map
     int MaxNrOfFilters; // Max. nr. of filters allowed per frame
     int MaxNrOfPtables; // Max. nr. of Ptables allowed per frame
     long MaxFrameLen; // Max frame length of this file
-    long ByteStreamLen; // MaxFrameLen * NrOfChannels
-    long BitStreamLen; // ByteStreamLen * RESOL
     long NrOfBitsPerCh; // MaxFrameLen * RESOL
 };
 
 typedef uint8_t ADataByte;
 
-#endif
+#endif  // __DST_DEFS_H__

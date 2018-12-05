@@ -62,38 +62,22 @@
     along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
-#ifndef CODEDTABLE_H
-#define CODEDTABLE_H
+#ifndef ___CODED_TABLE_H__
+#define ___CODED_TABLE_H__
 
 #include "dst_defs.h"
 
-class CCodedTableBase
+class CCodedTable
 {
-
 public:
-
     int TableType; // FILTER or PTABLE: indicates contents
-    int StreamBits; // nr of bits all filters use in the stream
     int CPredOrder[NROFFRICEMETHODS]; // Code_PredOrder[Method]
     int CPredCoef[NROFPRICEMETHODS][MAXCPREDORDER]; // Code_PredCoef[Method][CoefNr]
     int Coded[2 * MAX_CHANNELS]; // DST encode coefs/entries of Fir/PtabNr
     int BestMethod[2 * MAX_CHANNELS]; // BestMethod[Fir/PtabNr]
     int m[2 * MAX_CHANNELS][NROFFRICEMETHODS]; // m[Fir/PtabNr][Method]
-    int DataLenData[2 * MAX_CHANNELS]; // Fir/PtabDataLength[Fir/PtabNr]
 
     void calcCCP();
 };
 
-class CCodedTable : public CCodedTableBase
-{
-};
-
-class CCodedTableF : public CCodedTableBase
-{
-};
-
-class CCodedTableP : public CCodedTableBase
-{
-};
-
-#endif
+#endif  // ___CODED_TABLE_H__

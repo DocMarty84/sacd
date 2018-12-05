@@ -143,8 +143,6 @@ FirFilter& FirFilter::operator=(const FirFilter &obj)
 // fir must be aligned! fir_size must be %8!
 double FirFilter::fast_convolve(double *x)
 {
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "portability-simd-intrinsics"
     unsigned int i;
     double y;
 
@@ -158,13 +156,13 @@ double FirFilter::fast_convolve(double *x)
 
     for (i = 0; i < m_fir_size; i += 8)
     {
-        xy1 = _mm_add_pd(xy1, _mm_mul_pd(_mm_loadu_pd(x + i), _mm_load_pd(m_fir + i)));
-        xy2 = _mm_add_pd(xy2, _mm_mul_pd(_mm_loadu_pd(x + i + 2), _mm_load_pd(m_fir + i + 2)));
-        xy3 = _mm_add_pd(xy3, _mm_mul_pd(_mm_loadu_pd(x + i + 4), _mm_load_pd(m_fir + i + 4)));
-        xy4 = _mm_add_pd(xy4, _mm_mul_pd(_mm_loadu_pd(x + i + 6), _mm_load_pd(m_fir + i + 6)));
+        xy1 = _mm_add_pd(xy1, _mm_mul_pd(_mm_loadu_pd(x + i), _mm_load_pd(m_fir + i))); // NOLINT(portability-simd-intrinsics)
+        xy2 = _mm_add_pd(xy2, _mm_mul_pd(_mm_loadu_pd(x + i + 2), _mm_load_pd(m_fir + i + 2))); // NOLINT(portability-simd-intrinsics)
+        xy3 = _mm_add_pd(xy3, _mm_mul_pd(_mm_loadu_pd(x + i + 4), _mm_load_pd(m_fir + i + 4))); // NOLINT(portability-simd-intrinsics)
+        xy4 = _mm_add_pd(xy4, _mm_mul_pd(_mm_loadu_pd(x + i + 6), _mm_load_pd(m_fir + i + 6))); // NOLINT(portability-simd-intrinsics)
     }
 
-    xy1 = _mm_add_pd(_mm_add_pd(xy1, xy2), _mm_add_pd(xy3, xy4));
+    xy1 = _mm_add_pd(_mm_add_pd(xy1, xy2), _mm_add_pd(xy3, xy4)); // NOLINT(portability-simd-intrinsics)
 
     double xy_flt[2];
 
@@ -173,7 +171,6 @@ double FirFilter::fast_convolve(double *x)
     y = xy_flt[0] + xy_flt[1];
 
     return y;
-#pragma clang diagnostic pop
 }
 
 // ResamplerNxMx

@@ -62,36 +62,37 @@
     along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
-#ifndef STRDATA_H
-#define STRDATA_H
+#ifndef __STRDATA_H__
+#define __STRDATA_H__
 
 #include <stdio.h>
 #include "dst_defs.h"
 
 class CStrData
 {
+public:
+    void resetReadingIndex();
+
+    void createBuffer(size_t size);
+
+    void fillBuffer(uint8_t *pBuf, size_t size);
+
+    void getChrUnsigned(int length, uint8_t &x);
+
+    void getIntUnsigned(int length, int &x);
+
+    void getShortSigned(int length, short &x);
+
+    int get_in_bitcount();
+
+private:
     uint8_t DSTdata[MAX_CHANNELS * MAX_DSDBYTES_INFRAME];
-    int TotalBytes;
+    size_t TotalBytes;
     int ByteCounter;
     int BitPosition;
     uint8_t DataByte;
 
-public:
-
-    void getDSTDataPointer(uint8_t** pBuffer);
-    void resetReadingIndex();
-    void createBuffer(int size);
-    void deleteBuffer();
-    void fillBuffer(uint8_t* pBuf, int size);
-    void getChrUnsigned(int length, uint8_t& x);
-    void getIntUnsigned(int length, int& x);
-    void getIntSigned(int length, int& x);
-    void getShortSigned(int length, short& x);
-    int get_in_bitcount();
-
-private:
-
-    int getbits(long& outword, int out_bitptr);
+    int getbits(long &outword, int out_bitptr);
 };
 
-#endif
+#endif  // __STRDATA_H__
