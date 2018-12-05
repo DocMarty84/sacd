@@ -18,9 +18,9 @@
     along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
-#include <math.h>
+#include <cmath>
 #include <iconv.h>
-#include <stdlib.h>
+#include <cstdlib>
 #include "sacd_disc.h"
 
 using namespace std;
@@ -44,7 +44,7 @@ static inline string charset_convert(char *str, size_t insize, uint8_t codepage_
     }
 
     size_t buf_size = 2048;
-    char *buf = new char[buf_size];
+    auto buf = new char[buf_size];
     memset(buf, 0, buf_size);
     char *out_buf = buf;
 
@@ -71,12 +71,14 @@ scarletbook_area_t *sacd_disc_t::get_area(area_id_e area_id)
 {
     switch (area_id) {
     case AREA_TWOCH:
-        if (m_sb.twoch_area_idx != -1)
+        if (m_sb.twoch_area_idx != -1) {
             return &m_sb.area[m_sb.twoch_area_idx];
+        }
         break;
     case AREA_MULCH:
-        if (m_sb.mulch_area_idx != -1)
+        if (m_sb.mulch_area_idx != -1) {
             return &m_sb.area[m_sb.mulch_area_idx];
+        }
         break;
     default:
         break;
@@ -257,7 +259,7 @@ bool sacd_disc_t::close()
     return true;
 }
 
-string sacd_disc_t::set_track(uint32_t track_number, area_id_e area_id, uint32_t offset)
+string sacd_disc_t::set_track(int track_number, area_id_e area_id, uint32_t offset)
 {
     if (track_number < get_track_count(area_id)) {
         scarletbook_area_t *area = get_area(area_id);
@@ -470,16 +472,19 @@ bool sacd_disc_t::read_master_toc()
     master_toc_t *master_toc;
     m_sb.master_data = (uint8_t *) malloc(MASTER_TOC_LEN * SACD_LSN_SIZE);
 
-    if (!m_sb.master_data)
+    if (!m_sb.master_data) {
         return false;
+    }
 
-    if (!read_blocks_raw(START_OF_MASTER_TOC, MASTER_TOC_LEN, m_sb.master_data))
+    if (!read_blocks_raw(START_OF_MASTER_TOC, MASTER_TOC_LEN, m_sb.master_data)) {
         return false;
+    }
 
     master_toc = m_sb.master_toc = (master_toc_t *) m_sb.master_data;
 
-    if (strncmp("SACDMTOC", master_toc->id, 8) != 0)
+    if (strncmp("SACDMTOC", master_toc->id, 8) != 0) {
         return false;
+    }
 
     SWAP16(master_toc->album_set_size);
     SWAP16(master_toc->album_sequence_number);
@@ -491,8 +496,9 @@ bool sacd_disc_t::read_master_toc()
     SWAP16(master_toc->area_2_toc_size);
     SWAP16(master_toc->disc_date_year);
 
-    if (master_toc->version.major > SUPPORTED_VERSION_MAJOR || master_toc->version.minor > SUPPORTED_VERSION_MINOR)
+    if (master_toc->version.major > SUPPORTED_VERSION_MAJOR || master_toc->version.minor > SUPPORTED_VERSION_MINOR) {
         return false;
+    }
 
     // point to eof master header
     p = m_sb.master_data + SACD_LSN_SIZE;
@@ -501,8 +507,9 @@ bool sacd_disc_t::read_master_toc()
     for (int i = 0; i < MAX_LANGUAGE_COUNT; i++) {
         auto *master_text = (master_sacd_text_t *) p;
 
-        if (strncmp("SACDText", master_text->id, 8) != 0)
+        if (strncmp("SACDText", master_text->id, 8) != 0) {
             return false;
+        }
 
         SWAP16(master_text->album_title_position);
         SWAP16(master_text->album_artist_position);
@@ -525,88 +532,104 @@ bool sacd_disc_t::read_master_toc()
         if (i == 0) {
             auto current_charset = static_cast<uint8_t>(m_sb.master_toc->locales[i].character_set & 0x07);
 
-            if (master_text->album_title_position)
+            if (master_text->album_title_position) {
                 m_sb.master_text.album_title = charset_convert((char *) master_text + master_text->album_title_position,
                                                                strlen((char *) master_text +
                                                                       master_text->album_title_position),
                                                                current_charset);
+            }
 
-            if (master_text->album_title_phonetic_position)
+            if (master_text->album_title_phonetic_position) {
                 m_sb.master_text.album_title_phonetic = charset_convert(
                         (char *) master_text + master_text->album_title_phonetic_position,
                         strlen((char *) master_text + master_text->album_title_phonetic_position), current_charset);
+            }
 
-            if (master_text->album_artist_position)
+            if (master_text->album_artist_position) {
                 m_sb.master_text.album_artist = charset_convert(
                         (char *) master_text + master_text->album_artist_position,
                         strlen((char *) master_text + master_text->album_artist_position), current_charset);
+            }
 
-            if (master_text->album_artist_phonetic_position)
+            if (master_text->album_artist_phonetic_position) {
                 m_sb.master_text.album_artist_phonetic = charset_convert(
                         (char *) master_text + master_text->album_artist_phonetic_position,
                         strlen((char *) master_text + master_text->album_artist_phonetic_position), current_charset);
+            }
 
-            if (master_text->album_publisher_position)
+            if (master_text->album_publisher_position) {
                 m_sb.master_text.album_publisher = charset_convert(
                         (char *) master_text + master_text->album_publisher_position,
                         strlen((char *) master_text + master_text->album_publisher_position), current_charset);
+            }
 
-            if (master_text->album_publisher_phonetic_position)
+            if (master_text->album_publisher_phonetic_position) {
                 m_sb.master_text.album_publisher_phonetic = charset_convert(
                         (char *) master_text + master_text->album_publisher_phonetic_position,
                         strlen((char *) master_text + master_text->album_publisher_phonetic_position), current_charset);
+            }
 
-            if (master_text->album_copyright_position)
+            if (master_text->album_copyright_position) {
                 m_sb.master_text.album_copyright = charset_convert(
                         (char *) master_text + master_text->album_copyright_position,
                         strlen((char *) master_text + master_text->album_copyright_position), current_charset);
+            }
 
-            if (master_text->album_copyright_phonetic_position)
+            if (master_text->album_copyright_phonetic_position) {
                 m_sb.master_text.album_copyright_phonetic = charset_convert(
                         (char *) master_text + master_text->album_copyright_phonetic_position,
                         strlen((char *) master_text + master_text->album_copyright_phonetic_position), current_charset);
+            }
 
-            if (master_text->disc_title_position)
+            if (master_text->disc_title_position) {
                 m_sb.master_text.disc_title = charset_convert((char *) master_text + master_text->disc_title_position,
                                                               strlen((char *) master_text +
                                                                      master_text->disc_title_position),
                                                               current_charset);
+            }
 
-            if (master_text->disc_title_phonetic_position)
+            if (master_text->disc_title_phonetic_position) {
                 m_sb.master_text.disc_title_phonetic = charset_convert(
                         (char *) master_text + master_text->disc_title_phonetic_position,
                         strlen((char *) master_text + master_text->disc_title_phonetic_position), current_charset);
+            }
 
-            if (master_text->disc_artist_position)
+            if (master_text->disc_artist_position) {
                 m_sb.master_text.disc_artist = charset_convert((char *) master_text + master_text->disc_artist_position,
                                                                strlen((char *) master_text +
                                                                       master_text->disc_artist_position),
                                                                current_charset);
+            }
 
-            if (master_text->disc_artist_phonetic_position)
+            if (master_text->disc_artist_phonetic_position) {
                 m_sb.master_text.disc_artist_phonetic = charset_convert(
                         (char *) master_text + master_text->disc_artist_phonetic_position,
                         strlen((char *) master_text + master_text->disc_artist_phonetic_position), current_charset);
+            }
 
-            if (master_text->disc_publisher_position)
+            if (master_text->disc_publisher_position) {
                 m_sb.master_text.disc_publisher = charset_convert(
                         (char *) master_text + master_text->disc_publisher_position,
                         strlen((char *) master_text + master_text->disc_publisher_position), current_charset);
+            }
 
-            if (master_text->disc_publisher_phonetic_position)
+            if (master_text->disc_publisher_phonetic_position) {
                 m_sb.master_text.disc_publisher_phonetic = charset_convert(
                         (char *) master_text + master_text->disc_publisher_phonetic_position,
                         strlen((char *) master_text + master_text->disc_publisher_phonetic_position), current_charset);
+            }
 
-            if (master_text->disc_copyright_position)
+            if (master_text->disc_copyright_position) {
                 m_sb.master_text.disc_copyright = charset_convert(
                         (char *) master_text + master_text->disc_copyright_position,
                         strlen((char *) master_text + master_text->disc_copyright_position), current_charset);
+            }
 
-            if (master_text->disc_copyright_phonetic_position)
+            if (master_text->disc_copyright_phonetic_position) {
                 m_sb.master_text.disc_copyright_phonetic = charset_convert(
                         (char *) master_text + master_text->disc_copyright_phonetic_position,
                         strlen((char *) master_text + master_text->disc_copyright_phonetic_position), current_charset);
+            }
         }
 
         p += SACD_LSN_SIZE;
@@ -630,8 +653,9 @@ bool sacd_disc_t::read_area_toc(int area_idx)
     p = area_data = area->area_data;
     area_toc = area->area_toc = (area_toc_t *) area_data;
 
-    if (strncmp("TWOCHTOC", area_toc->id, 8) != 0 && strncmp("MULCHTOC", area_toc->id, 8) != 0)
+    if (strncmp("TWOCHTOC", area_toc->id, 8) != 0 && strncmp("MULCHTOC", area_toc->id, 8) != 0) {
         return false;
+    }
 
     SWAP16(area_toc->size);
     SWAP32(area_toc->track_start);
@@ -647,34 +671,40 @@ bool sacd_disc_t::read_area_toc(int area_idx)
 
     current_charset = static_cast<uint8_t>(area->area_toc->languages[sacd_text_idx].character_set & 0x07);
 
-    if (area_toc->copyright_offset)
+    if (area_toc->copyright_offset) {
         area->copyright = charset_convert((char *) area_toc + area_toc->copyright_offset,
                                           strlen((char *) area_toc + area_toc->copyright_offset), current_charset);
+    }
 
-    if (area_toc->copyright_phonetic_offset)
+    if (area_toc->copyright_phonetic_offset) {
         area->copyright_phonetic = charset_convert((char *) area_toc + area_toc->copyright_phonetic_offset,
                                                    strlen((char *) area_toc + area_toc->copyright_phonetic_offset),
                                                    current_charset);
+    }
 
-    if (area_toc->area_description_offset)
+    if (area_toc->area_description_offset) {
         area->description = charset_convert((char *) area_toc + area_toc->area_description_offset,
                                             strlen((char *) area_toc + area_toc->area_description_offset),
                                             current_charset);
+    }
 
-    if (area_toc->area_description_phonetic_offset)
+    if (area_toc->area_description_phonetic_offset) {
         area->description_phonetic = charset_convert((char *) area_toc + area_toc->area_description_phonetic_offset,
                                                      strlen((char *) area_toc +
                                                             area_toc->area_description_phonetic_offset),
                                                      current_charset);
+    }
 
-    if (area_toc->version.major > SUPPORTED_VERSION_MAJOR || area_toc->version.minor > SUPPORTED_VERSION_MINOR)
+    if (area_toc->version.major > SUPPORTED_VERSION_MAJOR || area_toc->version.minor > SUPPORTED_VERSION_MINOR) {
         return false;
+    }
 
     // is this the 2 channel?
-    if (area_toc->channel_count == 2 && area_toc->loudspeaker_config == 0)
+    if (area_toc->channel_count == 2 && area_toc->loudspeaker_config == 0) {
         m_sb.twoch_area_idx = area_idx;
-    else
+    } else {
         m_sb.mulch_area_idx = area_idx;
+    }
 
     // Area TOC size is SACD_LSN_SIZE
     p += SACD_LSN_SIZE;
@@ -777,11 +807,13 @@ bool sacd_disc_t::read_area_toc(int area_idx)
                             }
 
                             if (j < track_amount - 1) {
-                                while (*track_ptr != 0)
+                                while (*track_ptr != 0) {
                                     track_ptr++;
+                                }
 
-                                while (*track_ptr == 0)
+                                while (*track_ptr == 0) {
                                     track_ptr++;
+                                }
                             }
                         }
                     }

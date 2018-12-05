@@ -22,14 +22,13 @@
 
 #include "scarletbook.h"
 
-const char* character_set[] =
-{
-    "US-ASCII",
-    "ISO646-JP",
-    "ISO-8859-1",
-    "SHIFT_JISX0213",
-    "KSC5636",
-    "GB2312",
-    "BIG5",
-    "ISO-8859-1"
+const char *character_set[] = {
+        "US-ASCII",
+        "ISO646-JP",
+        "ISO-8859-1",
+        "SHIFT_JISX0213",
+        "KSC5636",
+        "GB2312",
+        "BIG5",
+        "ISO-8859-1"
 };

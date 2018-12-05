@@ -18,15 +18,13 @@
     along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
+#include "sacd_media.h"
 #include "sacd_dsdiff.h"
 
-#define MARK_TIME(m) ((double)m.hours * 60 * 60 + (double)m.minutes * 60 + (double)m.seconds + ((double)m.samples + (double)m.offset) / (double)m_samplerate)
-#define MIN(a, b) (((a)<(b))?(a):(b))
-#define MAX(a, b) (((a)>(b))?(a):(b))
 
 sacd_dsdiff_t::sacd_dsdiff_t()
 {
-    m_current_subsong = 0;
+    m_current_track = 0;
     m_dst_encoded = 0;
 }
 
@@ -193,8 +191,9 @@ int sacd_dsdiff_t::open(sacd_media_t *p_file)
             m_data_offset = static_cast<uint64_t>(m_file->get_position());
             m_data_size = ck.get_size();
 
-            if (!(m_file->read(&ck, sizeof(ck)) == sizeof(ck) && ck.has_id("FRTE") && ck.get_size() == 6))
+            if (!(m_file->read(&ck, sizeof(ck)) == sizeof(ck) && ck.has_id("FRTE") && ck.get_size() == 6)) {
                 return 0;
+            }
 
             m_data_offset += sizeof(ck) + ck.get_size();
             m_data_size -= sizeof(ck) + ck.get_size();
@@ -202,14 +201,16 @@ int sacd_dsdiff_t::open(sacd_media_t *p_file)
             m_current_size = m_data_size;
             uint32_t frame_count;
 
-            if (m_file->read(&frame_count, sizeof(frame_count)) != sizeof(frame_count))
+            if (m_file->read(&frame_count, sizeof(frame_count)) != sizeof(frame_count)) {
                 return 0;
+            }
 
             m_frame_count = hton32(frame_count);
             uint16_t framerate;
 
-            if (m_file->read(&framerate, sizeof(framerate)) != sizeof(framerate))
+            if (m_file->read(&framerate, sizeof(framerate)) != sizeof(framerate)) {
                 return 0;
+            }
 
             m_framerate = static_cast<uint16_t>(hton16(framerate));
             m_frame_size = m_samplerate / 8 * m_channel_count / m_framerate;
@@ -315,7 +316,7 @@ int sacd_dsdiff_t::open(sacd_media_t *p_file)
 
 bool sacd_dsdiff_t::close()
 {
-    m_current_subsong = 0;
+    m_current_track = 0;
     m_subsong.resize(0);
     m_id3tags.resize(0);
     m_dsti_size = 0;
@@ -323,15 +324,15 @@ bool sacd_dsdiff_t::close()
     return true;
 }
 
-string sacd_dsdiff_t::set_track(uint32_t track_number, area_id_e area_id, uint32_t oset)
+string sacd_dsdiff_t::set_track(int track_number, area_id_e area_id, uint32_t oset)
 {
-    (void)area_id;
-    (void)oset;
+    (void) area_id;
+    (void) oset;
 
     if (track_number < m_subsong.size()) {
-        m_current_subsong = track_number;
-        double t0 = m_subsong[m_current_subsong].start_time;
-        double t1 = m_subsong[m_current_subsong].stop_time;
+        m_current_track = static_cast<uint32_t>(track_number);
+        double t0 = m_subsong[m_current_track].start_time;
+        double t1 = m_subsong[m_current_track].stop_time;
         auto offset = (uint64_t) (t0 * m_framerate / m_frame_count * m_data_size);
         uint64_t size = (uint64_t) (t1 * m_framerate / m_frame_count * m_data_size) - offset;
 

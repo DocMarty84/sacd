@@ -21,7 +21,7 @@
 #ifndef __SACD_DSD_H__
 #define __SACD_DSD_H__
 
-#include <stdint.h>
+#include <cstdint>
 #include "endianess.h"
 
 #pragma pack(1)

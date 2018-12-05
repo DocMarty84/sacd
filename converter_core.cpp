@@ -32,8 +32,8 @@ void ConverterCore::writeData(FILE *pFile, int nOffset, int nSamples)
 {
     int nFramesIn = nSamples * m_nPcmOutChannels;
     int nBytesOut = nFramesIn * 3;
-    char *pSrc = (char *) (m_arrPcmBuf.data() + nOffset * m_nPcmOutChannels);
-    char *pDst = new char[nBytesOut];
+    auto pSrc = (char *) (m_arrPcmBuf.data() + nOffset * m_nPcmOutChannels);
+    auto pDst = new char[nBytesOut];
     float fSample;
     int32_t nVal;
     int nOut = 0;
@@ -44,16 +44,16 @@ void ConverterCore::writeData(FILE *pFile, int nOffset, int nSamples)
         fSample = MAX(fSample, -1.0f);
         fSample *= 8388608.0;
 
-        nVal = lrintf(fSample);
+        nVal = static_cast<int32_t>(lrintf(fSample));
         nVal = MIN(nVal, 8388607);
         nVal = MAX(nVal, -8388608);
 
-        pDst[nOut++] = nVal;
-        pDst[nOut++] = nVal >> 8;
-        pDst[nOut++] = nVal >> 16;
+        pDst[nOut++] = static_cast<char>(nVal);
+        pDst[nOut++] = static_cast<char>(nVal >> 8);
+        pDst[nOut++] = static_cast<char>(nVal >> 16);
     }
 
-    fwrite(pDst, 1, nBytesOut, pFile);
+    fwrite(pDst, 1, static_cast<size_t>(nBytesOut), pFile);
     delete[] pDst;
 
     m_fProgress = m_pSacdReader->getProgress();
@@ -97,7 +97,7 @@ int ConverterCore::open(const string &p_path)
     m_pSacdMedia = new sacd_media_t();
 
     if (!m_pSacdMedia) {
-        printf("PANIC: exception_overflow\n");
+        printf("Error: exception_overflow\n");
         return 0;
     }
 
@@ -105,43 +105,43 @@ int ConverterCore::open(const string &p_path)
     case ISO_TYPE:
         m_pSacdReader = new sacd_disc_t;
         if (!m_pSacdReader) {
-            printf("PANIC: exception_overflow\n");
+            printf("Error: exception_overflow\n");
             return 0;
         }
         break;
     case DSDIFF_TYPE:
         m_pSacdReader = new sacd_dsdiff_t;
         if (!m_pSacdReader) {
-            printf("PANIC: exception_overflow\n");
+            printf("Error: exception_overflow\n");
             return 0;
         }
         break;
     case DSF_TYPE:
         m_pSacdReader = new sacd_dsf_t;
         if (!m_pSacdReader) {
-            printf("PANIC: exception_overflow\n");
+            printf("Error: exception_overflow\n");
             return 0;
         }
         break;
     default:
-        printf("PANIC: exception_io_unsupported_format\n");
+        printf("Error: exception_io_unsupported_format\n");
         return 0;
     }
 
     if (!m_pSacdMedia->open(p_path.c_str())) {
-        printf("PANIC: exception_io_data\n");
+        printf("Error: exception_io_data\n");
         return 0;
     }
 
     if ((m_nTracks = m_pSacdReader->open(m_pSacdMedia)) == 0) {
-        printf("PANIC: Failed to parse SACD media\n");
+        printf("Error: failed to parse SACD media\n");
         return 0;
     }
 
     return m_nTracks;
 }
 
-string ConverterCore::init(uint32_t nSubsong, int g_nSampleRate, area_id_e nArea)
+string ConverterCore::init(int nTrack, int g_nSampleRate, area_id_e nArea)
 {
     if (m_pDsdPcmConverter) {
         delete m_pDsdPcmConverter;
@@ -153,15 +153,15 @@ string ConverterCore::init(uint32_t nSubsong, int g_nSampleRate, area_id_e nArea
         m_pDstDecoder = nullptr;
     }
 
-    string strFileName = m_pSacdReader->set_track(nSubsong, nArea, 0);
+    string strFileName = m_pSacdReader->set_track(nTrack, nArea, 0);
     m_nDsdSamplerate = m_pSacdReader->get_samplerate();
     m_nFramerate = m_pSacdReader->get_framerate();
     m_nPcmOutSamples = g_nSampleRate / m_nFramerate;
     m_nPcmOutChannels = m_pSacdReader->get_channels();
     m_nDstBufSize = m_nDsdBufSize = m_nDsdSamplerate / 8 / m_nFramerate * m_nPcmOutChannels;
-    m_arrDsdBuf.resize(m_nDsdBufSize * g_nCPUs);
-    m_arrDstBuf.resize(m_nDstBufSize * g_nCPUs);
-    m_arrPcmBuf.resize(m_nPcmOutChannels * m_nPcmOutSamples);
+    m_arrDsdBuf.resize(static_cast<size_t>(static_cast<unsigned int>(m_nDsdBufSize * g_nCPUs)));
+    m_arrDstBuf.resize(static_cast<size_t>(static_cast<unsigned int>(m_nDstBufSize * g_nCPUs)));
+    m_arrPcmBuf.resize(static_cast<size_t>(static_cast<unsigned int>(m_nPcmOutChannels * m_nPcmOutSamples)));
     m_pDsdPcmConverter = new DSDPCMConverter();
     m_pDsdPcmConverter->init(m_nPcmOutChannels, m_nDsdSamplerate, g_nSampleRate);
 
@@ -208,17 +208,17 @@ bool ConverterCore::decode(FILE *pFile)
     size_t nDstSize = 0;
     int nThread = 0;
 
-    while (1) {
+    while (true) {
         nThread = m_pDstDecoder ? m_pDstDecoder->slot_nr : 0;
         pDsdData = m_arrDsdBuf.data() + m_nDsdBufSize * nThread;
         pDstData = m_arrDstBuf.data() + m_nDstBufSize * nThread;
-        nDstSize = m_nDstBufSize;
+        nDstSize = static_cast<size_t>(m_nDstBufSize);
         frame_type_e nFrameType;
 
         if (m_pSacdReader->read_frame(pDstData, &nDstSize, &nFrameType)) {
             if (nDstSize > 0) {
                 if (nFrameType == FRAME_INVALID) {
-                    nDstSize = m_nDstBufSize;
+                    nDstSize = static_cast<size_t>(m_nDstBufSize);
                     memset(pDstData, DSD_SILENCE_BYTE, nDstSize);
                 }
 
@@ -245,7 +245,7 @@ bool ConverterCore::decode(FILE *pFile)
                         nRemoveSamples = m_nPcmOutDelta;
                     }
 
-                    dsd2pcm(pDsdData, nDsdSize, m_arrPcmBuf.data());
+                    dsd2pcm(pDsdData, static_cast<int>(nDsdSize), m_arrPcmBuf.data());
 
                     if (nRemoveSamples > 0) {
                         fixPcmStream(false, m_arrPcmBuf.data() + m_nPcmOutChannels * nRemoveSamples,
@@ -271,7 +271,7 @@ bool ConverterCore::decode(FILE *pFile)
     }
 
     if (nDsdSize > 0) {
-        dsd2pcm(pDsdData, nDsdSize, m_arrPcmBuf.data());
+        dsd2pcm(pDsdData, static_cast<int>(nDsdSize), m_arrPcmBuf.data());
         writeData(pFile, 0, m_nPcmOutSamples);
 
         return false;

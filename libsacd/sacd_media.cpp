@@ -19,11 +19,10 @@
 */
 
 #include <unistd.h>
-#include <sys/stat.h>
 #include "scarletbook.h"
 #include "sacd_media.h"
 
-#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MIN(a, b) (((a)<(b))?(a):(b))
 
 sacd_media_t::sacd_media_t()
 = default;
@@ -31,16 +30,14 @@ sacd_media_t::sacd_media_t()
 sacd_media_t::~sacd_media_t()
 = default;
 
-bool sacd_media_t::open(const char* path)
+bool sacd_media_t::open(const char *path)
 {
-    try
-    {
+    try {
         media_file = fopen(path, "r");
         m_strFilePath = path;
         return true;
     }
-    catch (...)
-    {
+    catch (...) {
     }
 
     return false;
@@ -69,7 +66,7 @@ int64_t sacd_media_t::get_position()
     return ftell(media_file);
 }
 
-size_t sacd_media_t::read(void* data, size_t size)
+size_t sacd_media_t::read(void *data, size_t size)
 {
     return fread(data, 1, size, media_file);
 }

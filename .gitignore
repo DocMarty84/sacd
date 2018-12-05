@@ -3,5 +3,5 @@ project.geany
 TODO
 *.o
 **/*.o
-sacd
+sacd2wav
 cmake-build-debug

@@ -69,10 +69,16 @@
 #include <cstdint>
 #include "dst_consts.h"
 
-#define MIN(x, y) (((x) < (y)) ? (x) : (y))
-#define MAX(x, y) (((x) > (y)) ? (x) : (y))
-#define GET_BIT(BitBase, BitIndex) ((((unsigned char*)BitBase)[BitIndex >> 3] >> (7 - (BitIndex & 7))) & 1)
-#define GET_NIBBLE(NibbleBase, NibbleIndex) ((((unsigned char*)NibbleBase)[NibbleIndex >> 1] >> ((NibbleIndex & 1) << 2)) & 0x0f)
+#ifndef MIN
+#define MIN(a, b) (((a)<(b))?(a):(b))
+#endif  // MIN
+
+#ifndef MAX
+#define MAX(a, b) (((a)>(b))?(a):(b))
+#endif  // MAX
+
+#define GET_BIT(BitBase, BitIndex) ((((unsigned char*)(BitBase))[(BitIndex) >> 3] >> (7 - ((BitIndex) & 7))) & 1)
+#define GET_NIBBLE(NibbleBase, NibbleIndex) ((((unsigned char*)(NibbleBase))[(NibbleIndex) >> 1] >> (((NibbleIndex) & 1) << 2)) & 0x0f)
 #define dst_memcpy(dst, src, size) ::memcpy(dst, src, size)
 #define dst_memset(dst, val, size) ::memset(dst, val, size)
 

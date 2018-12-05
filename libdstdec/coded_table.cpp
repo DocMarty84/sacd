@@ -68,9 +68,11 @@
 // Initialize the prediction order and coefficients for prediction filter used to predict the filter coefficients.
 void CCodedTable::calcCCP()
 {
-    for (auto &i : CPredCoef)
-        for (int &j : i)
+    for (auto &i : CPredCoef) {
+        for (int &j : i) {
             j = 0;
+        }
+    }
 
     switch (TableType) {
     case T_FILTER:

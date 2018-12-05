@@ -21,7 +21,7 @@
 #ifndef __DSD_PCM_CONSTANTS_H__
 #define __DSD_PCM_CONSTANTS_H__
 
-#include <stdint.h>
+#include <cstdint>
 
 
 #define DSDxFs64 (44100 * 64)

@@ -21,10 +21,22 @@
 #ifndef __SACD_MEDIA_H__
 #define __SACD_MEDIA_H__
 
-#include <stdint.h>
+#include <cstdint>
 #include <cstring>
 #include <string>
-#include <stdio.h>
+#include <cstdio>
+
+#ifndef MARK_TIME
+#define MARK_TIME(m) ((double)(m).hours * 60 * 60 + (double)(m).minutes * 60 + (double)(m).seconds + ((double)(m).samples + (double)(m).offset) / (double)m_samplerate)
+#endif  // MARK_TIME
+
+#ifndef MIN
+#define MIN(a, b) (((a)<(b))?(a):(b))
+#endif  // MIN
+
+#ifndef MAX
+#define MAX(a, b) (((a)>(b))?(a):(b))
+#endif  // MAX
 
 using namespace std;
 

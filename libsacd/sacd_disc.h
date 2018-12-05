@@ -21,7 +21,7 @@
 #ifndef __SACD_DISC_H__
 #define __SACD_DISC_H__
 
-#include <stdint.h>
+#include <cstdint>
 #include "endianess.h"
 #include "scarletbook.h"
 #include "sacd_reader.h"
@@ -62,7 +62,7 @@ public:
 
     bool close() override;
 
-    string set_track(uint32_t track_number, area_id_e area_id, uint32_t offset) override;
+    string set_track(int track_number, area_id_e area_id, uint32_t offset) override;
 
     bool read_frame(uint8_t *frame_data, size_t *frame_size, frame_type_e *frame_type) override;
 

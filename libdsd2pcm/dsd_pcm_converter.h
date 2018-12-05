@@ -21,8 +21,8 @@
 #ifndef __DSD_PCM_CONVERTER_H__
 #define __DSD_PCM_CONVERTER_H__
 
-#include <stdlib.h>
-#include <stdint.h>
+#include <cstdlib>
+#include <cstdint>
 
 #include "dsd_pcm_constants.h"
 #include "upsampler.h"

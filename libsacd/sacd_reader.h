@@ -21,7 +21,7 @@
 #ifndef __SACD_READER_H__
 #define __SACD_READER_H__
 
-#include <stdint.h>
+#include <cstdint>
 #include <string>
 #include "sacd_media.h"
 
@@ -62,7 +62,7 @@ public:
 
     virtual float getProgress() = 0;
 
-    virtual string set_track(uint32_t track_number, area_id_e area_id, uint32_t offset) = 0;
+    virtual string set_track(int track_number, area_id_e area_id, uint32_t offset) = 0;
 
     virtual bool read_frame(uint8_t *frame_data, size_t *frame_size, frame_type_e *frame_type) = 0;
 };

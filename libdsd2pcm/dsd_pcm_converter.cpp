@@ -18,8 +18,8 @@
     along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
-#include <string.h>
-#include <assert.h>
+#include <cstring>
+#include <cassert>
 #include "dsd_pcm_converter.h"
 
 DSDPCMConverter::DSDPCMConverter() : m_dither24(24)
@@ -36,7 +36,6 @@ DSDPCMConverter::DSDPCMConverter() : m_dither24(24)
         for (int j = 0; j < 4; j++) {
             m_bits_table[i][j] = (i & (1 << (3 - j))) ? 1.0 : -1.0;
         }
-
     }
 
     for (int i = 0; i < 256; i++) {
@@ -49,8 +48,8 @@ DSDPCMConverter::DSDPCMConverter() : m_dither24(24)
 
 DSDPCMConverter::~DSDPCMConverter()
 {
-    for (int i = 0; i < DSDPCM_MAX_CHANNELS; i++) {
-        delete m_resampler[i];
+    for (auto &i : m_resampler) {
+        delete i;
     }
 }
 
@@ -86,7 +85,6 @@ int DSDPCMConverter::init(int channels, int dsd_samplerate, int pcm_samplerate)
         default:
             return -2;
         }
-
         break;
     }
     case DSDxFs128:
@@ -136,8 +134,9 @@ int DSDPCMConverter::init(int channels, int dsd_samplerate, int pcm_samplerate)
     }
 
     // prepare filter
-    for (auto &i : m_resampler)
+    for (auto &i : m_resampler) {
         delete i;
+    }
 
     memset(m_resampler, 0, sizeof(m_resampler));
 
@@ -153,8 +152,9 @@ int DSDPCMConverter::init(int channels, int dsd_samplerate, int pcm_samplerate)
 
     generateFilter(impulse, taps, sinc_freq);
 
-    for (int i = 0; i < channels; i++)
+    for (int i = 0; i < channels; i++) {
         m_resampler[i] = new ResamplerNxMx(m_upsampling, m_decimation, impulse, taps);
+    }
 
     delete[] impulse;
 

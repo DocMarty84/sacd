@@ -18,10 +18,9 @@
     along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
+#include "sacd_media.h"
 #include "sacd_dsf.h"
 
-#define MARK_TIME(m) ((double)m.hours * 60 * 60 + (double)m.minutes * 60 + (double)m.seconds + ((double)m.samples + (double)m.offset) / (double)m_samplerate)
-#define MIN(a, b) (((a)<(b))?(a):(b))
 
 sacd_dsf_t::sacd_dsf_t()
 {
@@ -130,7 +129,7 @@ int sacd_dsf_t::open(sacd_media_t *p_file)
         return false;
     }
 
-    m_block_data.resize(static_cast<unsigned long>(static_cast<unsigned int>(m_channel_count * m_block_size)));
+    m_block_data.resize(static_cast<size_t>(static_cast<unsigned int>(m_channel_count * m_block_size)));
     m_data_offset = static_cast<uint64_t>(m_file->get_position());
     m_data_end_offset = m_data_offset + ((m_sample_count / 8) * m_channel_count);
     m_data_size = hton64(ck.get_size()) - sizeof(ck);
@@ -144,11 +143,11 @@ bool sacd_dsf_t::close()
     return true;
 }
 
-string sacd_dsf_t::set_track(uint32_t track_number, area_id_e area_id, uint32_t offset)
+string sacd_dsf_t::set_track(int track_number, area_id_e area_id, uint32_t offset)
 {
     // "use" an unused parameter
-    (void)area_id;
-    (void)offset;
+    (void) area_id;
+    (void) offset;
 
     if (track_number) {
         return "";

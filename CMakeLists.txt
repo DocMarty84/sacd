@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
-project(sacd)
+project(sacd2wav)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -7,7 +7,7 @@ include_directories(libdsd2pcm)
 include_directories(libdstdec)
 include_directories(libsacd)
 
-add_executable(sacd
+add_executable(sacd2wav
         libdsd2pcm/dither.h
         libdsd2pcm/dsd_pcm_constants.h
         libdsd2pcm/dsd_pcm_converter.cpp
@@ -41,10 +41,10 @@ add_executable(sacd
         libsacd/sacd_reader.h
         libsacd/scarletbook.cpp
         libsacd/scarletbook.h
-        libsacd/version.h
+        version.h
         converter_core.cpp
         converter_core.h
         main.cpp
         )
 
-target_link_libraries(sacd iconv)
+target_link_libraries(sacd2wav iconv)

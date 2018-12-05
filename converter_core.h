@@ -24,7 +24,7 @@ public:
 
     int open(const string &p_path);
 
-    string init(uint32_t nSubsong, int g_nSampleRate, area_id_e nArea);
+    string init(int nTrack, int g_nSampleRate, area_id_e nArea);
 
     void fixPcmStream(bool bIsEnd, float *pPcmData, int nPcmSamples);
 

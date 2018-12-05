@@ -98,22 +98,22 @@ int CDSTDecoder::close()
 
 // DST decode a complete frame (all channels)
 #define LT_RUN_FILTER_I(FilterTable, ChannelStatus) \
-Predict  = FilterTable[ 0][ChannelStatus[ 0]]; \
-Predict += FilterTable[ 1][ChannelStatus[ 1]]; \
-Predict += FilterTable[ 2][ChannelStatus[ 2]]; \
-Predict += FilterTable[ 3][ChannelStatus[ 3]]; \
-Predict += FilterTable[ 4][ChannelStatus[ 4]]; \
-Predict += FilterTable[ 5][ChannelStatus[ 5]]; \
-Predict += FilterTable[ 6][ChannelStatus[ 6]]; \
-Predict += FilterTable[ 7][ChannelStatus[ 7]]; \
-Predict += FilterTable[ 8][ChannelStatus[ 8]]; \
-Predict += FilterTable[ 9][ChannelStatus[ 9]]; \
-Predict += FilterTable[10][ChannelStatus[10]]; \
-Predict += FilterTable[11][ChannelStatus[11]]; \
-Predict += FilterTable[12][ChannelStatus[12]]; \
-Predict += FilterTable[13][ChannelStatus[13]]; \
-Predict += FilterTable[14][ChannelStatus[14]]; \
-Predict += FilterTable[15][ChannelStatus[15]];
+Predict  = (FilterTable)[ 0][(ChannelStatus)[ 0]]; \
+Predict += (FilterTable)[ 1][(ChannelStatus)[ 1]]; \
+Predict += (FilterTable)[ 2][(ChannelStatus)[ 2]]; \
+Predict += (FilterTable)[ 3][(ChannelStatus)[ 3]]; \
+Predict += (FilterTable)[ 4][(ChannelStatus)[ 4]]; \
+Predict += (FilterTable)[ 5][(ChannelStatus)[ 5]]; \
+Predict += (FilterTable)[ 6][(ChannelStatus)[ 6]]; \
+Predict += (FilterTable)[ 7][(ChannelStatus)[ 7]]; \
+Predict += (FilterTable)[ 8][(ChannelStatus)[ 8]]; \
+Predict += (FilterTable)[ 9][(ChannelStatus)[ 9]]; \
+Predict += (FilterTable)[10][(ChannelStatus)[10]]; \
+Predict += (FilterTable)[11][(ChannelStatus)[11]]; \
+Predict += (FilterTable)[12][(ChannelStatus)[12]]; \
+Predict += (FilterTable)[13][(ChannelStatus)[13]]; \
+Predict += (FilterTable)[14][(ChannelStatus)[14]]; \
+Predict += (FilterTable)[15][(ChannelStatus)[15]];
 
 
 int CDSTDecoder::decode(uint8_t *DSTFrame, size_t frameSize, uint8_t *DSDFrame)

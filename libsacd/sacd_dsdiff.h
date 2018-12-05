@@ -21,7 +21,7 @@
 #ifndef __SACD_DSDIFF_H__
 #define __SACD_DSDIFF_H__
 
-#include <stdint.h>
+#include <cstdint>
 #include <vector>
 #include "endianess.h"
 #include "scarletbook.h"
@@ -93,7 +93,7 @@ public:
 
     bool close() override;
 
-    string set_track(uint32_t track_number, area_id_e area_id, uint32_t offset) override;
+    string set_track(int track_number, area_id_e area_id, uint32_t offset) override;
 
     bool read_frame(uint8_t *frame_data, size_t *frame_size, frame_type_e *frame_type) override;
 
@@ -114,7 +114,7 @@ private:
     uint32_t m_frame_count;
     vector<subsong_t> m_subsong;
     vector<id3tags_t> m_id3tags;
-    uint32_t m_current_subsong;
+    uint32_t m_current_track;
     uint64_t m_current_offset;
     uint64_t m_current_size;
 };

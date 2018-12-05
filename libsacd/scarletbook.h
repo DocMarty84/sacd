@@ -23,7 +23,7 @@
 #ifndef __SCARLETBOOK_H__
 #define __SCARLETBOOK_H__
 
-#include <stdint.h>
+#include <cstdint>
 #include <string>
 
 using namespace std;

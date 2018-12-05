@@ -18,10 +18,10 @@
     along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 */
 
-#include <xmmintrin.h>  // SSE2 inlines
-#include <math.h>
-#include <string.h>
-#include <assert.h>
+#include <emmintrin.h>
+#include <cmath>
+#include <cstring>
+#include <cassert>
 #include "upsampler.h"
 
 // FirHistory
@@ -86,18 +86,20 @@ FirFilter::FirFilter(const double *fir, unsigned int fir_size, bool no_history) 
 {
     m_org_fir_size = fir_size;
 
-    if ((fir_size % 8) != 0)
+    if ((fir_size % 8) != 0) {
         m_fir_size = (fir_size / 8 + 1) * 8; // align size!
-    else
-        m_fir_size = m_org_fir_size; // already aligned
+    } else {
+        m_fir_size = m_org_fir_size;
+    } // already aligned
 
     m_fir_alloc = new double[m_fir_size + 2]; // reserve some space for pointer align
 
     // align pointer!
     m_fir = (((size_t) m_fir_alloc & 0x0f) == 0) ? m_fir_alloc : (double *) (((size_t) m_fir_alloc & ~0x0f) + 0x10);
 
-    for (unsigned int i = 0; i < m_fir_size; i++)
+    for (unsigned int i = 0; i < m_fir_size; i++) {
         m_fir[i] = (i < fir_size) ? fir[i] : 0;
+    }
 }
 
 FirFilter::FirFilter() : m_x(0)
@@ -182,8 +184,9 @@ ResamplerNxMx::ResamplerNxMx(unsigned int nX, unsigned int mX, const double *fir
         xfir = new double[xfir_size[0]];
 
         // fill and pad with zeros
-        for (unsigned int j = 0; j < xfir_size[0]; j++)
+        for (unsigned int j = 0; j < xfir_size[0]; j++) {
             xfir[j] = j < xfir_size[i] ? fir[i + j * nX] : 0;
+        }
 
         // got filter
         m_flt[i] = FirFilter(xfir, xfir_size[i], true);
@@ -268,8 +271,9 @@ void generateFilter(double *impulse, int taps, double sinc_freq)
 
     int_sinc_freq = (int) floor(sinc_freq);
 
-    if ((double) int_sinc_freq != sinc_freq)
+    if ((double) int_sinc_freq != sinc_freq) {
         int_sinc_freq = 0;
+    }
 
     sum_y = 0;
 
@@ -285,8 +289,9 @@ void generateFilter(double *impulse, int taps, double sinc_freq)
             //y1 = ((double)i == center_tap) ? 1.0 : 0.0;
         }
 
-        if ((double) i == center_tap)
+        if ((double) i == center_tap) {
             y1 = 1.0;
+        }
 
         // windowing (BH7)
         x2 = (double) i / (double) (taps - 1);   // from [0.0 to 1.0]
@@ -299,6 +304,7 @@ void generateFilter(double *impulse, int taps, double sinc_freq)
     }
 
     // scale
-    for (int i = 0; i < taps; i++)
+    for (int i = 0; i < taps; i++) {
         impulse[i] /= sum_y;
+    }
 }
