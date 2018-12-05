@@ -34,12 +34,11 @@ class DSTFrameIndex
 {
 public:
     uint64_t offset;
-    uint32_t length;
 };
 
 enum MarkType
 {
-    TrackStart = 0, TrackStop = 1, ProgramStart = 2, Index = 4
+    TrackStart = 0, TrackStop = 1
 };
 
 class Marker
@@ -78,25 +77,25 @@ class sacd_dsdiff_t : public sacd_reader_t
 public:
     sacd_dsdiff_t();
 
-    virtual ~sacd_dsdiff_t();
+    ~sacd_dsdiff_t() override;
 
-    uint32_t get_track_count(area_id_e area_id = AREA_BOTH);
+    uint32_t get_track_count(area_id_e area_id) override;
 
-    int get_channels();
+    int get_channels() override;
 
-    int get_samplerate();
+    int get_samplerate() override;
 
-    int get_framerate();
+    int get_framerate() override;
 
-    float getProgress();
+    float getProgress() override;
 
-    int open(sacd_media_t *p_file);
+    int open(sacd_media_t *p_file) override;
 
-    bool close();
+    bool close() override;
 
-    string set_track(uint32_t track_number, area_id_e area_id = AREA_BOTH, uint32_t offset = 0);
+    string set_track(uint32_t track_number, area_id_e area_id, uint32_t offset) override;
 
-    bool read_frame(uint8_t *frame_data, size_t *frame_size, frame_type_e *frame_type);
+    bool read_frame(uint8_t *frame_data, size_t *frame_size, frame_type_e *frame_type) override;
 
 private:
     uint64_t get_dsti_for_frame(uint32_t frame_nr);

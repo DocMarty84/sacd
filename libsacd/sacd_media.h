@@ -39,7 +39,9 @@ public:
 
     virtual bool close();
 
-    virtual bool seek(int64_t position, int mode = SEEK_SET);
+    virtual bool seek(int64_t position, int mode);
+
+    bool seek(int64_t position);
 
     virtual int64_t get_position();
 

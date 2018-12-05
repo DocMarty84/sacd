@@ -165,7 +165,8 @@ int sacd_disc_t::open(sacd_media_t *p_file)
     }
 
     if (m_sb.master_toc->area_1_toc_1_start) {
-        m_sb.area[m_sb.area_count].area_data = (uint8_t *) malloc(m_sb.master_toc->area_1_toc_size * SACD_LSN_SIZE);
+        m_sb.area[m_sb.area_count].area_data = (uint8_t *) malloc(
+                static_cast<size_t>(m_sb.master_toc->area_1_toc_size * SACD_LSN_SIZE));
 
         if (!m_sb.area[m_sb.area_count].area_data) {
             close();
@@ -183,7 +184,8 @@ int sacd_disc_t::open(sacd_media_t *p_file)
     }
 
     if (m_sb.master_toc->area_2_toc_1_start) {
-        m_sb.area[m_sb.area_count].area_data = (uint8_t *) malloc(m_sb.master_toc->area_2_toc_size * SACD_LSN_SIZE);
+        m_sb.area[m_sb.area_count].area_data = (uint8_t *) malloc(
+                static_cast<size_t>(m_sb.master_toc->area_2_toc_size * SACD_LSN_SIZE));
 
         if (!m_sb.area[m_sb.area_count].area_data) {
             close();
@@ -282,7 +284,7 @@ string sacd_disc_t::set_track(uint32_t track_number, area_id_e area_id, uint32_t
 
         char *buf;
 
-        if (area->area_track_text[track_number].track_type_performer.size()) {
+        if (!area->area_track_text[track_number].track_type_performer.empty()) {
             buf = (char *) calloc(6 + 2 + 2 + area->area_track_text[track_number].track_type_performer.size() + 3 +
                                   area->area_track_text[track_number].track_type_title.size() + 4 + 1, 1);
             sprintf(buf, "(%ich) %.2i. %s - %s.wav", m_channel_count, track_number + 1,
@@ -337,10 +339,11 @@ bool sacd_disc_t::read_frame(uint8_t *frame_data, size_t *frame_size, frame_type
             m_buffer_offset += AUDIO_SECTOR_HEADER_SIZE;
 
             for (uint8_t i = 0; i < m_audio_sector.header.packet_info_count; i++) {
-                m_audio_sector.packet[i].frame_start = ((m_buffer + m_buffer_offset)[0] >> 7) & 1;
-                m_audio_sector.packet[i].data_type = ((m_buffer + m_buffer_offset)[0] >> 3) & 7;
+                m_audio_sector.packet[i].frame_start = static_cast<uint8_t>(((m_buffer + m_buffer_offset)[0] >> 7) & 1);
+                m_audio_sector.packet[i].data_type = static_cast<uint8_t>(((m_buffer + m_buffer_offset)[0] >> 3) & 7);
                 m_audio_sector.packet[i].packet_length =
-                        ((m_buffer + m_buffer_offset)[0] & 7) << 8 | (m_buffer + m_buffer_offset)[1];
+                        static_cast<uint16_t>(((m_buffer + m_buffer_offset)[0] & 7) << 8 |
+                                              (m_buffer + m_buffer_offset)[1]);
                 m_buffer_offset += AUDIO_PACKET_INFO_SIZE;
             }
 
@@ -364,8 +367,8 @@ bool sacd_disc_t::read_frame(uint8_t *frame_data, size_t *frame_size, frame_type
                 if (m_frame.started) {
                     if (packet->frame_start) {
                         if (m_frame.size <= (int) (*frame_size)) {
-                            memcpy(frame_data, m_frame.data, m_frame.size);
-                            *frame_size = m_frame.size;
+                            memcpy(frame_data, m_frame.data, static_cast<size_t>(m_frame.size));
+                            *frame_size = static_cast<size_t>(m_frame.size);
                         } else {
                             m_sector_bad_reads++;
                             continue;
@@ -410,8 +413,8 @@ bool sacd_disc_t::read_frame(uint8_t *frame_data, size_t *frame_size, frame_type
 
     if (m_frame.started) {
         if (m_frame.size <= (int) (*frame_size)) {
-            memcpy(frame_data, m_frame.data, m_frame.size);
-            *frame_size = m_frame.size;
+            memcpy(frame_data, m_frame.data, static_cast<size_t>(m_frame.size));
+            *frame_size = static_cast<size_t>(m_frame.size);
         } else {
             m_sector_bad_reads++;
             m_buffer_offset = 0;
@@ -454,6 +457,8 @@ bool sacd_disc_t::read_blocks_raw(uint32_t lb_start, size_t block_count, uint8_t
 
         break;
     }
+    default:
+        return false;
     }
 
     return true;
@@ -494,7 +499,7 @@ bool sacd_disc_t::read_master_toc()
 
     // set pointers to text content
     for (int i = 0; i < MAX_LANGUAGE_COUNT; i++) {
-        master_sacd_text_t *master_text = (master_sacd_text_t *) p;
+        auto *master_text = (master_sacd_text_t *) p;
 
         if (strncmp("SACDText", master_text->id, 8) != 0)
             return false;
@@ -518,7 +523,7 @@ bool sacd_disc_t::read_master_toc()
 
         // we only use the first SACDText entry
         if (i == 0) {
-            uint8_t current_charset = m_sb.master_toc->locales[i].character_set & 0x07;
+            auto current_charset = static_cast<uint8_t>(m_sb.master_toc->locales[i].character_set & 0x07);
 
             if (master_text->album_title_position)
                 m_sb.master_text.album_title = charset_convert((char *) master_text + master_text->album_title_position,
@@ -609,10 +614,8 @@ bool sacd_disc_t::read_master_toc()
 
     m_sb.master_man = (master_man_t *) p;
 
-    if (strncmp("SACD_Man", m_sb.master_man->id, 8) != 0)
-        return false;
+    return strncmp("SACD_Man", m_sb.master_man->id, 8) == 0;
 
-    return true;
 }
 
 bool sacd_disc_t::read_area_toc(int area_idx)
@@ -642,7 +645,7 @@ bool sacd_disc_t::read_area_toc(int area_idx)
     SWAP16(area_toc->index_list_offset);
     SWAP16(area_toc->access_list_offset);
 
-    current_charset = area->area_toc->languages[sacd_text_idx].character_set & 0x07;
+    current_charset = static_cast<uint8_t>(area->area_toc->languages[sacd_text_idx].character_set & 0x07);
 
     if (area_toc->copyright_offset)
         area->copyright = charset_convert((char *) area_toc + area_toc->copyright_offset,
@@ -689,11 +692,11 @@ bool sacd_disc_t::read_area_toc(int area_idx)
 
                     if (area_text->track_text_position[i] > 0) {
                         track_ptr = (char *) (p + area_text->track_text_position[i]);
-                        track_amount = *track_ptr;
+                        track_amount = static_cast<uint8_t>(*track_ptr);
                         track_ptr += 4;
 
                         for (uint8_t j = 0; j < track_amount; j++) {
-                            track_type = *track_ptr;
+                            track_type = static_cast<uint8_t>(*track_ptr);
                             track_ptr++;
                             track_ptr++; // skip unknown 0x20
 
@@ -767,6 +770,8 @@ bool sacd_disc_t::read_area_toc(int area_idx)
                                 case TRACK_TYPE_EXTRA_MESSAGE_PHONETIC:
                                     area->area_track_text[i].track_type_extra_message_phonetic = charset_convert(
                                             track_ptr, strlen(track_ptr), current_charset);
+                                    break;
+                                default:
                                     break;
                                 }
                             }

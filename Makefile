@@ -5,7 +5,7 @@ CXXFLAGS = -std=c++17 -Wall
 VPATH = libdstdec:libdsd2pcm:libsacd
 
 INCLUDE_DIRS = libdstdec libdsd2pcm libsacd
-CPPFLAGS = $(foreach includedir,$(INCLUDE_DIRS),-I$(includedir)) -Ofast -flto
+CPPFLAGS = $(foreach includedir,$(INCLUDE_DIRS),-I$(includedir)) -Ofast -flto -Wno-unknown-pragmas
 
 LIBRARIES = iconv pthread
 LIBRARY_DIRS = libdstdec libdsd2pcm libsacd

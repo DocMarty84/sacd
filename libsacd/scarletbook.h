@@ -38,6 +38,8 @@ using namespace std;
 
 enum character_set_t
 {
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
     CHAR_SET_UNKNOWN = 0,
     CHAR_SET_ISO646 = 1, // ISO 646 (IRV), no escape sequences allowed
     CHAR_SET_ISO8859_1 = 2, // ISO 8859-1, no escape sequences allowed
@@ -46,6 +48,7 @@ enum character_set_t
     CHAR_SET_GB2312 = 5, // Chinese GB 2312-80
     CHAR_SET_BIG5 = 6, // Big5
     CHAR_SET_ISO8859_1_ESC = 7 // ISO 8859-1, single byte set escape sequences allowed
+#pragma clang diagnostic pop
 };
 
 // string representation for character sets
@@ -53,6 +56,8 @@ extern const char *character_set[];
 
 enum genre_t
 {
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
     GENRE_NOT_USED = 0, // 12
     GENRE_NOT_DEFINED = 1, // 12
     GENRE_ADULT_CONTEMPORARY = 2, // 12
@@ -83,13 +88,17 @@ enum genre_t
     GENRE_SPOKEN_WORD = 27, // 101
     GENRE_WORLD_MUSIC = 28, // 12
     GENRE_BLUES = 29 // 0
+#pragma clang diagnostic pop
 };
 
 enum category_t
 {
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
     CATEGORY_NOT_USED = 0,
     CATEGORY_GENERAL = 1,
     CATEGORY_JAPANESE = 2
+#pragma clang diagnostic pop
 };
 
 enum track_type_t
@@ -120,14 +129,13 @@ typedef struct
     uint8_t category;  // category_t
     uint16_t reserved;
     uint8_t genre; // genre_t
-}
-        genre_table_t;
+} genre_table_t;
 
 //Language & character set
 typedef struct
 {
     char language_code[2]; // ISO639-2 Language code
-    uint8_t character_set; // char_set_t, 1 (ISO 646)
+    character_set_t character_set; // 1 (ISO 646)
     uint8_t reserved;
 } locale_table_t;
 

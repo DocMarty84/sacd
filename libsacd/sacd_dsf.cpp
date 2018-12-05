@@ -92,7 +92,7 @@ int sacd_dsf_t::open(sacd_media_t *p_file)
         return false;
     }
 
-    pos = m_file->get_position();
+    pos = static_cast<uint64_t>(m_file->get_position());
 
     if (!(m_file->read(&fmt, sizeof(fmt)) == sizeof(fmt) && fmt.has_id("fmt "))) {
         return false;
@@ -130,8 +130,8 @@ int sacd_dsf_t::open(sacd_media_t *p_file)
         return false;
     }
 
-    m_block_data.resize(m_channel_count * m_block_size);
-    m_data_offset = m_file->get_position();
+    m_block_data.resize(static_cast<unsigned long>(static_cast<unsigned int>(m_channel_count * m_block_size)));
+    m_data_offset = static_cast<uint64_t>(m_file->get_position());
     m_data_end_offset = m_data_offset + ((m_sample_count / 8) * m_channel_count);
     m_data_size = hton64(ck.get_size()) - sizeof(ck);
     m_read_offset = m_data_offset;
@@ -146,6 +146,10 @@ bool sacd_dsf_t::close()
 
 string sacd_dsf_t::set_track(uint32_t track_number, area_id_e area_id, uint32_t offset)
 {
+    // "use" an unused parameter
+    (void)area_id;
+    (void)offset;
+
     if (track_number) {
         return "";
     }
@@ -164,7 +168,8 @@ bool sacd_dsf_t::read_frame(uint8_t *frame_data, size_t *frame_size, frame_type_
             m_block_data_end = (int) MIN(m_data_end_offset - m_file->get_position(), m_block_data.size());
 
             if (m_block_data_end > 0) {
-                m_block_data_end = m_file->read(m_block_data.data(), m_block_data_end);
+                m_block_data_end = static_cast<int>(m_file->read(m_block_data.data(),
+                                                                 static_cast<size_t>(m_block_data_end)));
             }
 
             if (m_block_data_end > 0) {
@@ -175,7 +180,7 @@ bool sacd_dsf_t::read_frame(uint8_t *frame_data, size_t *frame_size, frame_type_
         }
 
         for (int ch = 0; ch < m_channel_count; ch++) {
-            uint8_t b = m_block_data.data()[ch * m_block_size + m_block_offset];
+            uint8_t b = m_block_data[ch * m_block_size + m_block_offset];
             frame_data[i * m_channel_count + ch] = m_is_lsb ? swap_bits[b] : b;
         }
 
@@ -183,7 +188,7 @@ bool sacd_dsf_t::read_frame(uint8_t *frame_data, size_t *frame_size, frame_type_
         samples_read++;
     }
 
-    *frame_size = samples_read * m_channel_count;
+    *frame_size = static_cast<size_t>(static_cast<unsigned int>(samples_read * m_channel_count));
     *frame_type = samples_read > 0 ? FRAME_DSD : FRAME_INVALID;
 
     return samples_read > 0;

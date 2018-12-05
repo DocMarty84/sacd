@@ -33,6 +33,8 @@
 class FmtDSFChunk : public Chunk
 {
 public:
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
     uint32_t format_id;
     uint32_t channel_type;
     uint32_t channel_count;
@@ -40,6 +42,7 @@ public:
     uint32_t bits_per_sample;
     uint64_t sample_count;
     uint32_t block_size;
+#pragma clang diagnostic pop
 };
 
 #pragma pack()

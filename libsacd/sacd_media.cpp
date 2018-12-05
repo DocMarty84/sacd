@@ -26,12 +26,10 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
 sacd_media_t::sacd_media_t()
-{
-}
+= default;
 
 sacd_media_t::~sacd_media_t()
-{
-}
+= default;
 
 bool sacd_media_t::open(const char* path)
 {
@@ -61,6 +59,11 @@ bool sacd_media_t::seek(int64_t position, int mode)
     return true;
 }
 
+bool sacd_media_t::seek(int64_t position)
+{
+    return seek(position, SEEK_SET);
+}
+
 int64_t sacd_media_t::get_position()
 {
     return ftell(media_file);
@@ -78,6 +81,6 @@ int64_t sacd_media_t::skip(int64_t bytes)
 
 string sacd_media_t::getFileName()
 {
-    m_strFilePath = m_strFilePath.substr(m_strFilePath.find_last_of("/") + 1, string::npos);
-    return m_strFilePath.substr(0, m_strFilePath.find_last_of(".")) + ".wav";
+    m_strFilePath = m_strFilePath.substr(m_strFilePath.find_last_of('/') + 1, string::npos);
+    return m_strFilePath.substr(0, m_strFilePath.find_last_of('.')) + ".wav";
 }
