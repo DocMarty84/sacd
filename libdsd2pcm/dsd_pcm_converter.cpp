@@ -49,9 +49,7 @@ DSDPCMConverter::DSDPCMConverter() : m_dither24(24)
 
 DSDPCMConverter::~DSDPCMConverter()
 {
-    int i;
-
-    for (i = 0; i < DSDPCM_MAX_CHANNELS; i++) {
+    for (int i = 0; i < DSDPCM_MAX_CHANNELS; i++) {
         delete m_resampler[i];
     }
 }

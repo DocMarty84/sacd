@@ -36,10 +36,9 @@ void ConverterCore::writeData(FILE *pFile, int nOffset, int nSamples)
     char *pDst = new char[nBytesOut];
     float fSample;
     int32_t nVal;
-    int nFrame;
     int nOut = 0;
 
-    for (nFrame = 0; nFrame < nFramesIn; nFrame++, pSrc += 4) {
+    for (int nFrame = 0; nFrame < nFramesIn; nFrame++, pSrc += 4) {
         fSample = *(float *) (pSrc);
         fSample = MIN(fSample, 1.0f);
         fSample = MAX(fSample, -1.0f);

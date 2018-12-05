@@ -84,8 +84,6 @@ void FirHistory::pushSample(double x)
 // FirFilter
 FirFilter::FirFilter(const double *fir, unsigned int fir_size, bool no_history) : m_x(!no_history ? fir_size : 0)
 {
-    unsigned int i;
-
     m_org_fir_size = fir_size;
 
     if ((fir_size % 8) != 0)
@@ -98,7 +96,7 @@ FirFilter::FirFilter(const double *fir, unsigned int fir_size, bool no_history) 
     // align pointer!
     m_fir = (((size_t) m_fir_alloc & 0x0f) == 0) ? m_fir_alloc : (double *) (((size_t) m_fir_alloc & ~0x0f) + 0x10);
 
-    for (i = 0; i < m_fir_size; i++)
+    for (unsigned int i = 0; i < m_fir_size; i++)
         m_fir[i] = (i < fir_size) ? fir[i] : 0;
 }
 
@@ -205,13 +203,13 @@ ResamplerNxMx::~ResamplerNxMx()
 
 void ResamplerNxMx::processSample(const double *x, unsigned int x_n, double *y, unsigned int *y_n)
 {
-    unsigned int i, offset, x_phase;
+    unsigned int offset, x_phase;
 
     assert((x_n * m_xN) % m_xM == 0); // x_n input samples to integer number of y_n output samples!!!
 
     offset = 0;
 
-    for (i = 0; i < x_n; i++) {
+    for (unsigned int i = 0; i < x_n; i++) {
         // push 1 sample
         m_x.pushSample(x[i]);
 

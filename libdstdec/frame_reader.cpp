@@ -123,7 +123,6 @@ void CFrameReader::readDSDFrame(CStrData &SD, long MaxFrameLen, int NrOfChannels
 void CFrameReader::readTableSegmentData(CStrData &SD, int NrOfChannels, int FrameLen, int MaxNrOfSegs, int MinSegLen,
                                         CSegment &S, int &SameSegAllCh)
 {
-    int ChNr = 0;
     int DefinedBits = 0;
     bool ResolRead = false;
     int SegNr = 0;
@@ -178,7 +177,7 @@ void CFrameReader::readTableSegmentData(CStrData &SD, int NrOfChannels, int Fram
         S.NrOfSegments[0] = SegNr + 1;
         S.SegmentLen[0][SegNr] = 0;
 
-        for (ChNr = 1; ChNr < NrOfChannels; ChNr++) {
+        for (int ChNr = 1; ChNr < NrOfChannels; ChNr++) {
             S.NrOfSegments[ChNr] = S.NrOfSegments[0];
 
             for (SegNr = 0; SegNr < S.NrOfSegments[0]; SegNr++) {
@@ -186,6 +185,7 @@ void CFrameReader::readTableSegmentData(CStrData &SD, int NrOfChannels, int Fram
             }
         }
     } else {
+        int ChNr = 0;
         while (ChNr < NrOfChannels) {
             if (SegNr >= MaxNrOfSegs) {
                 printf("ERROR: Too many segments for this channel!");

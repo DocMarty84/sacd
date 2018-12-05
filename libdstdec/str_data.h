@@ -65,7 +65,7 @@
 #ifndef __STRDATA_H__
 #define __STRDATA_H__
 
-#include <stdio.h>
+#include <cstdio>
 #include "dst_defs.h"
 
 class CStrData

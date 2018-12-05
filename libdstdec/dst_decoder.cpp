@@ -69,9 +69,7 @@
 #include "dst_decoder.h"
 
 CDSTDecoder::CDSTDecoder()
-{
-    ::memset(this, 0, sizeof(*this));
-}
+= default;
 
 CDSTDecoder::~CDSTDecoder()
 = default;
@@ -79,7 +77,7 @@ CDSTDecoder::~CDSTDecoder()
 int CDSTDecoder::init(int channels, int fs44)
 {
     FrameHdr.NrOfChannels = channels;
-    FrameHdr.MaxFrameLen = (588 * fs44 / 8);
+    FrameHdr.MaxFrameLen = static_cast<size_t>(588 * fs44 / 8);
     FrameHdr.NrOfBitsPerCh = FrameHdr.MaxFrameLen * RESOL;
     FrameHdr.MaxNrOfFilters = 2 * FrameHdr.NrOfChannels;
     FrameHdr.MaxNrOfPtables = 2 * FrameHdr.NrOfChannels;
@@ -118,13 +116,11 @@ Predict += FilterTable[14][ChannelStatus[14]]; \
 Predict += FilterTable[15][ChannelStatus[15]];
 
 
-int CDSTDecoder::decode(uint8_t* DSTFrame, size_t frameSize, uint8_t* DSDFrame)
+int CDSTDecoder::decode(uint8_t *DSTFrame, size_t frameSize, uint8_t *DSDFrame)
 {
     int rv = 0;
-    int ChNr;
-    int BitNr;
     uint8_t ACError;
-    int NrOfBitsPerCh = FrameHdr.NrOfBitsPerCh;
+    size_t NrOfBitsPerCh = FrameHdr.NrOfBitsPerCh;
     int NrOfChannels = FrameHdr.NrOfChannels;
 
     FrameHdr.FrameNr++;
@@ -134,14 +130,12 @@ int CDSTDecoder::decode(uint8_t* DSTFrame, size_t frameSize, uint8_t* DSDFrame)
     // unpack DST frame: segmentation, mapping, arithmetic data
     rv = unpack(DSTFrame, DSDFrame);
 
-    if (rv == -1)
-    {
+    if (rv == -1) {
         return -1;
     }
 
-    if (FrameHdr.DSTCoded == 1)
-    {
-        CACData AC;
+    if (FrameHdr.DSTCoded == 1) {
+        CACData AC{};
         int16_t LT_ICoefI[2 * MAX_CHANNELS][16][256];
         uint8_t LT_Status[MAX_CHANNELS][16];
 
@@ -153,10 +147,8 @@ int CDSTDecoder::decode(uint8_t* DSTFrame, size_t frameSize, uint8_t* DSDFrame)
         AC.decodeBit_Decode(&ACError, reverse7LSBs(FrameHdr.ICoefA[0][0]), AData, ADataLen);
         dst_memset(DSDFrame, 0, (NrOfBitsPerCh * NrOfChannels + 7) / 8);
 
-        for (BitNr = 0; BitNr < NrOfBitsPerCh; BitNr++)
-        {
-            for (ChNr = 0; ChNr < NrOfChannels; ChNr++)
-            {
+        for (int BitNr = 0; BitNr < NrOfBitsPerCh; BitNr++) {
+            for (int ChNr = 0; ChNr < NrOfChannels; ChNr++) {
                 int16_t Predict;
                 uint8_t Residual;
                 int16_t BitVal;
@@ -166,25 +158,22 @@ int CDSTDecoder::decode(uint8_t* DSTFrame, size_t frameSize, uint8_t* DSDFrame)
                 LT_RUN_FILTER_I(LT_ICoefI[FilterNr], LT_Status[ChNr]);
 
                 // Arithmetic decode the incoming bit
-                if ((FrameHdr.HalfProb[ChNr]) && (BitNr < FrameHdr.NrOfHalfBits[ChNr]))
-                {
+                if ((FrameHdr.HalfProb[ChNr]) && (BitNr < FrameHdr.NrOfHalfBits[ChNr])) {
                     AC.decodeBit_Decode(&Residual, AC_PROBS / 2, AData, ADataLen);
-                }
-                else
-                {
+                } else {
                     int PtableNr = GET_NIBBLE(FrameHdr.Ptable4Bit[ChNr], BitNr);
                     int PtableIndex = AC.getPtableIndex(Predict, FrameHdr.PtableLen[PtableNr]);
                     AC.decodeBit_Decode(&Residual, P_one[PtableNr][PtableIndex], AData, ADataLen);
                 }
 
                 // Channel bit depends on the predicted bit and BitResidual[][]
-                BitVal = ((((uint16_t)Predict) >> 15) ^ Residual) & 1;
+                BitVal = static_cast<int16_t>(((((uint16_t) Predict) >> 15) ^ Residual) & 1);
 
                 // Shift the result into the correct bit position
-                DSDFrame[(BitNr >> 3) * NrOfChannels + ChNr] |= (uint8_t)(BitVal << (7 - (BitNr & 7)));
+                DSDFrame[(BitNr >> 3) * NrOfChannels + ChNr] |= (uint8_t) (BitVal << (7 - (BitNr & 7)));
 
                 // Update filter
-                uint32_t* const st = (uint32_t*)LT_Status[ChNr];
+                auto *const st = (uint32_t *) LT_Status[ChNr];
                 st[3] = (st[3] << 1) | ((st[2] >> 31) & 1);
                 st[2] = (st[2] << 1) | ((st[1] >> 31) & 1);
                 st[1] = (st[1] << 1) | ((st[0] >> 31) & 1);
@@ -195,8 +184,7 @@ int CDSTDecoder::decode(uint8_t* DSTFrame, size_t frameSize, uint8_t* DSDFrame)
         // Flush the arithmetic decoder
         AC.decodeBit_Flush(&ACError, AData, ADataLen);
 
-        if (ACError != 1)
-        {
+        if (ACError != 1) {
             printf("ERROR: Arithmetic decoding error!");
             rv = -1;
         }
@@ -206,7 +194,7 @@ int CDSTDecoder::decode(uint8_t* DSTFrame, size_t frameSize, uint8_t* DSDFrame)
 }
 
 // Read a complete frame from the DST input stream
-int CDSTDecoder::unpack(uint8_t* DSTFrame, uint8_t* DSDFrame)
+int CDSTDecoder::unpack(uint8_t *DSTFrame, uint8_t *DSDFrame)
 {
     int Dummy;
     int Ready = 0;
@@ -217,13 +205,11 @@ int CDSTDecoder::unpack(uint8_t* DSTFrame, uint8_t* DSDFrame)
     // interpret DST header byte
     SD.getIntUnsigned(1, FrameHdr.DSTCoded);
 
-    if (FrameHdr.DSTCoded == 0)
-    {
+    if (FrameHdr.DSTCoded == 0) {
         SD.getIntUnsigned(1, Dummy);// Was &D->DstXbits.Bit, but it was never used
         SD.getIntUnsigned(6, Dummy);
 
-        if (Dummy != 0)
-        {
+        if (Dummy != 0) {
             printf("ERROR: Illegal stuffing pattern in frame %d!\n", FrameHdr.FrameNr);
 
             return -1;
@@ -231,18 +217,15 @@ int CDSTDecoder::unpack(uint8_t* DSTFrame, uint8_t* DSDFrame)
 
         // Read DSD data and put in output stream
         CFrameReader::readDSDFrame(SD, FrameHdr.MaxFrameLen, FrameHdr.NrOfChannels, DSDFrame);
-    }
-    else
-    {
+    } else {
         CFrameReader::readSegmentData(SD, FrameHdr);
         CFrameReader::readMappingData(SD, FrameHdr);
         CFrameReader::readFilterCoefSets(SD, FrameHdr.NrOfChannels, FrameHdr, StrFilter);
         CFrameReader::readProbabilityTables(SD, FrameHdr, StrPtable, P_one);
-        ADataLen = FrameHdr.CalcNrOfBits - SD.get_in_bitcount();
+        ADataLen = static_cast<int>(FrameHdr.CalcNrOfBits - SD.get_in_bitcount());
         CFrameReader::readArithmeticCodedData(SD, ADataLen, AData);
 
-        if (ADataLen > 0 && GET_BIT(AData, 0) != 0)
-        {
+        if (ADataLen > 0 && GET_BIT(AData, 0) != 0) {
             printf("ERROR: Illegal arithmetic code in frame %d!", FrameHdr.FrameNr);
             return -1;
         }
@@ -255,87 +238,76 @@ int CDSTDecoder::unpack(uint8_t* DSTFrame, uint8_t* DSDFrame)
 int16_t CDSTDecoder::reverse7LSBs(int16_t c)
 {
     const int16_t reverse[128] =
-    {
-        1, 65, 33, 97, 17, 81, 49, 113, 9, 73, 41, 105, 25, 89, 57, 121,
-        5, 69, 37, 101, 21, 85, 53, 117, 13, 77, 45, 109, 29, 93, 61, 125,
-        3, 67, 35, 99, 19, 83, 51, 115, 11, 75, 43, 107, 27, 91, 59, 123,
-        7, 71, 39, 103, 23, 87, 55, 119, 15, 79, 47, 111, 31, 95, 63, 127,
-        2, 66, 34, 98, 18, 82, 50, 114, 10, 74, 42, 106, 26, 90, 58, 122,
-        6, 70, 38, 102, 22, 86, 54, 118, 14, 78, 46, 110, 30, 94, 62, 126,
-        4, 68, 36, 100, 20, 84, 52, 116, 12, 76, 44, 108, 28, 92, 60, 124,
-        8, 72, 40, 104, 24, 88, 56, 120, 16, 80, 48, 112, 32, 96, 64, 128
-    };
+            {
+                    1, 65, 33, 97, 17, 81, 49, 113, 9, 73, 41, 105, 25, 89, 57, 121,
+                    5, 69, 37, 101, 21, 85, 53, 117, 13, 77, 45, 109, 29, 93, 61, 125,
+                    3, 67, 35, 99, 19, 83, 51, 115, 11, 75, 43, 107, 27, 91, 59, 123,
+                    7, 71, 39, 103, 23, 87, 55, 119, 15, 79, 47, 111, 31, 95, 63, 127,
+                    2, 66, 34, 98, 18, 82, 50, 114, 10, 74, 42, 106, 26, 90, 58, 122,
+                    6, 70, 38, 102, 22, 86, 54, 118, 14, 78, 46, 110, 30, 94, 62, 126,
+                    4, 68, 36, 100, 20, 84, 52, 116, 12, 76, 44, 108, 28, 92, 60, 124,
+                    8, 72, 40, 104, 24, 88, 56, 120, 16, 80, 48, 112, 32, 96, 64, 128
+            };
 
     return reverse[(c + (1 << SIZE_PREDCOEF)) & 127];
 }
 
 // Fill an array that indicates for each bit of each channel which table number must be used
-void CDSTDecoder::fillTable4Bit(CSegment& S, uint8_t Table4Bit[MAX_CHANNELS][MAX_DSDBITS_INFRAME / 2])
+void CDSTDecoder::fillTable4Bit(CSegment &S, uint8_t Table4Bit[MAX_CHANNELS][MAX_DSDBITS_INFRAME / 2])
 {
     int SegNr;
     int Start;
     int End;
     int8_t Val;
 
-    for (int ChNr = 0; ChNr < FrameHdr.NrOfChannels; ChNr++)
-    {
-        for (SegNr = 0, Start = 0; SegNr < S.NrOfSegments[ChNr] - 1; SegNr++)
-        {
-            Val = (int8_t)S.Table4Segment[ChNr][SegNr];
+    for (int ChNr = 0; ChNr < FrameHdr.NrOfChannels; ChNr++) {
+        for (SegNr = 0, Start = 0; SegNr < S.NrOfSegments[ChNr] - 1; SegNr++) {
+            Val = (int8_t) S.Table4Segment[ChNr][SegNr];
             End = Start + S.Resolution * 8 * S.SegmentLen[ChNr][SegNr];
 
-            for (int BitNr = Start; BitNr < End; BitNr++)
-            {
-                uint8_t* p = (uint8_t*)&Table4Bit[ChNr][BitNr / 2];
+            for (int BitNr = Start; BitNr < End; BitNr++) {
+                uint8_t *p = &Table4Bit[ChNr][BitNr / 2];
                 int s = (BitNr & 1) << 2;
-                *p = ((uint8_t)Val << s) | (*p & (0xf0 >> s));
+                *p = static_cast<uint8_t>(((uint8_t) Val << s) | (*p & (0xf0 >> s)));
             }
 
             Start += S.Resolution * 8 * S.SegmentLen[ChNr][SegNr];
         }
 
-        Val = (int8_t)S.Table4Segment[ChNr][SegNr];
+        Val = (int8_t) S.Table4Segment[ChNr][SegNr];
 
-        for (int BitNr = Start; BitNr < FrameHdr.NrOfBitsPerCh; BitNr++)
-        {
-            uint8_t* p = (uint8_t*)&Table4Bit[ChNr][BitNr / 2];
+        for (int BitNr = Start; BitNr < FrameHdr.NrOfBitsPerCh; BitNr++) {
+            uint8_t *p = &Table4Bit[ChNr][BitNr / 2];
             int s = (BitNr & 1) << 2;
-            *p = ((uint8_t)Val << s) | (*p & (0xf0 >> s));
+            *p = static_cast<uint8_t>(((uint8_t) Val << s) | (*p & (0xf0 >> s)));
         }
     }
 }
 
 void CDSTDecoder::LT_InitCoefTablesI(int16_t ICoefI[2 * MAX_CHANNELS][16][256])
 {
-    int FilterNr, FilterLength, TableNr, k, i, j;
+    int FilterLength, k;
 
-    for (FilterNr = 0; FilterNr < FrameHdr.NrOfFilters; FilterNr++)
-    {
+    for (int FilterNr = 0; FilterNr < FrameHdr.NrOfFilters; FilterNr++) {
         FilterLength = FrameHdr.PredOrder[FilterNr];
 
-        for (TableNr = 0; TableNr < 16; TableNr++)
-        {
+        for (int TableNr = 0; TableNr < 16; TableNr++) {
             k = FilterLength - TableNr * 8;
 
-            if (k > 8)
-            {
+            if (k > 8) {
                 k = 8;
-            }
-            else if (k < 0)
-            {
+            } else if (k < 0) {
                 k = 0;
             }
 
-            for (i = 0; i < 256; i++)
-            {
+            for (int i = 0; i < 256; i++) {
                 int cvalue = 0;
 
-                for (j = 0; j < k; j++)
-                {
+                for (int j = 0; j < k; j++) {
                     cvalue += (((i >> j) & 1) * 2 - 1) * FrameHdr.ICoefA[FilterNr][TableNr * 8 + j];
                 }
 
-                ICoefI[FilterNr][TableNr][i] = (int16_t)cvalue;
+                ICoefI[FilterNr][TableNr][i] = (int16_t) cvalue;
             }
         }
     }
@@ -343,13 +315,7 @@ void CDSTDecoder::LT_InitCoefTablesI(int16_t ICoefI[2 * MAX_CHANNELS][16][256])
 
 void CDSTDecoder::LT_InitStatus(uint8_t Status[MAX_CHANNELS][16])
 {
-    int ChNr, TableNr;
-
-    for (ChNr = 0; ChNr < FrameHdr.NrOfChannels; ChNr++)
-    {
-        for (TableNr = 0; TableNr < 16; TableNr++)
-        {
+    for (int ChNr = 0; ChNr < FrameHdr.NrOfChannels; ChNr++)
+        for (int TableNr = 0; TableNr < 16; TableNr++)
             Status[ChNr][TableNr] = 0xaa;
-        }
-    }
 }

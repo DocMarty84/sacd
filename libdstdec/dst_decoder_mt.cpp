@@ -22,21 +22,18 @@
 
 #define DSD_SILENCE_BYTE 0x69
 
-void* DSTDecoderThread(void* threadarg)
+void *DSTDecoderThread(void *threadarg)
 {
-    auto * frame_slot = (frame_slot_t*)threadarg;
+    auto *frame_slot = (frame_slot_t *) threadarg;
 
-    while (true)
-    {
+    while (true) {
         pthread_mutex_lock(&frame_slot->hMutex);
 
-        while (frame_slot->state != SLOT_LOADED && frame_slot->state != SLOT_TERMINATING)
-        {
+        while (frame_slot->state != SLOT_LOADED && frame_slot->state != SLOT_TERMINATING) {
             pthread_cond_wait(&frame_slot->hEventPut, &frame_slot->hMutex);
         }
 
-        if (frame_slot->state == SLOT_TERMINATING)
-        {
+        if (frame_slot->state == SLOT_TERMINATING) {
             frame_slot->dsd_data = nullptr;
             frame_slot->dst_size = 0;
             pthread_mutex_unlock(&frame_slot->hMutex);
@@ -48,12 +45,10 @@ void* DSTDecoderThread(void* threadarg)
 
         bool bError = false;
 
-        try
-        {
+        try {
             frame_slot->D.decode(frame_slot->dst_data, frame_slot->dst_size * 8, frame_slot->dsd_data);
         }
-        catch (...)
-        {
+        catch (...) {
             bError = true;
             frame_slot->D.close();
             frame_slot->D.init(frame_slot->channel_count, frame_slot->samplerate / 44100);
@@ -72,8 +67,7 @@ dst_decoder_t::dst_decoder_t(int threads)
 
     frame_slots = new frame_slot_t[thread_count];
 
-    if (!frame_slots)
-    {
+    if (!frame_slots) {
         thread_count = 0;
     }
 
@@ -85,9 +79,8 @@ dst_decoder_t::dst_decoder_t(int threads)
 
 dst_decoder_t::~dst_decoder_t()
 {
-    for (int i = 0; i < thread_count; i++)
-    {
-        frame_slot_t* frame_slot = &frame_slots[i];
+    for (int i = 0; i < thread_count; i++) {
+        frame_slot_t *frame_slot = &frame_slots[i];
 
         // Release worker (decoding) thread for exit
         pthread_mutex_lock(&frame_slot->hMutex);
@@ -108,20 +101,16 @@ dst_decoder_t::~dst_decoder_t()
 
 int dst_decoder_t::init(int channel_count, int samplerate, int framerate)
 {
-    for (int i = 0; i < thread_count; i++)
-    {
-        frame_slot_t* frame_slot = &frame_slots[i];
+    for (int i = 0; i < thread_count; i++) {
+        frame_slot_t *frame_slot = &frame_slots[i];
 
-        if (frame_slot->D.init(channel_count, (samplerate / 44100) / (framerate / 75)) == 0)
-        {
+        if (frame_slot->D.init(channel_count, (samplerate / 44100) / (framerate / 75)) == 0) {
             frame_slot->channel_count = channel_count;
             frame_slot->samplerate = samplerate;
             pthread_mutex_init(&frame_slot->hMutex, nullptr);
             pthread_cond_init(&frame_slot->hEventGet, nullptr);
             pthread_cond_init(&frame_slot->hEventPut, nullptr);
-        }
-        else
-        {
+        } else {
             return -1;
         }
 
@@ -136,10 +125,10 @@ int dst_decoder_t::init(int channel_count, int samplerate, int framerate)
     return 0;
 }
 
-int dst_decoder_t::decode(uint8_t* dst_data, size_t dst_size, uint8_t** dsd_data, size_t* dsd_size)
+int dst_decoder_t::decode(uint8_t *dst_data, size_t dst_size, uint8_t **dsd_data, size_t *dsd_size)
 {
     // Get current slot
-    frame_slot_t* frame_slot = &frame_slots[slot_nr];
+    frame_slot_t *frame_slot = &frame_slots[slot_nr];
 
     // Allocate encoded frame into the slot
     frame_slot->dsd_data = *dsd_data;
@@ -147,15 +136,12 @@ int dst_decoder_t::decode(uint8_t* dst_data, size_t dst_size, uint8_t** dsd_data
     frame_slot->dst_size = dst_size;
 
     // Release worker (decoding) thread on the loaded slot
-    if (dst_size > 0)
-    {
+    if (dst_size > 0) {
         pthread_mutex_lock(&frame_slot->hMutex);
         frame_slot->state = SLOT_LOADED;
         pthread_cond_signal(&frame_slot->hEventPut);
         pthread_mutex_unlock(&frame_slot->hMutex);
-    }
-    else
-    {
+    } else {
         frame_slot->state = SLOT_EMPTY;
     }
 
@@ -164,33 +150,30 @@ int dst_decoder_t::decode(uint8_t* dst_data, size_t dst_size, uint8_t** dsd_data
     frame_slot = &frame_slots[slot_nr];
 
     // Dump decoded frame
-    if (frame_slot->state != SLOT_EMPTY)
-    {
+    if (frame_slot->state != SLOT_EMPTY) {
         pthread_mutex_lock(&frame_slot->hMutex);
 
-        while (frame_slot->state != SLOT_READY)
-        {
+        while (frame_slot->state != SLOT_READY) {
             pthread_cond_wait(&frame_slot->hEventGet, &frame_slot->hMutex);
         }
 
         pthread_mutex_unlock(&frame_slot->hMutex);
     }
 
-    switch (frame_slot->state)
-    {
-        case SLOT_READY:
-            *dsd_data = frame_slot->dsd_data;
-            *dsd_size = (size_t)(samplerate / 8 / framerate * channel_count);
-            break;
-        case SLOT_READY_WITH_ERROR:
-            *dsd_data = frame_slot->dsd_data;
-            *dsd_size = (size_t)(samplerate / 8 / framerate * channel_count);
-            memset(*dsd_data, DSD_SILENCE_BYTE, *dsd_size);
-            break;
-        default:
-            *dsd_data = nullptr;
-            *dsd_size = 0;
-            break;
+    switch (frame_slot->state) {
+    case SLOT_READY:
+        *dsd_data = frame_slot->dsd_data;
+        *dsd_size = static_cast<size_t>(static_cast<unsigned int>(samplerate / 8 / framerate * channel_count));
+        break;
+    case SLOT_READY_WITH_ERROR:
+        *dsd_data = frame_slot->dsd_data;
+        *dsd_size = static_cast<size_t>(static_cast<unsigned int>(samplerate / 8 / framerate * channel_count));
+        memset(*dsd_data, DSD_SILENCE_BYTE, *dsd_size);
+        break;
+    default:
+        *dsd_data = nullptr;
+        *dsd_size = 0;
+        break;
     }
 
     frame_nr++;

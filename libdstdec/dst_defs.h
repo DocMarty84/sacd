@@ -66,7 +66,7 @@
 #define __DST_DEFS_H__
 
 #include <memory.h>
-#include <stdint.h>
+#include <cstdint>
 #include "dst_consts.h"
 
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
@@ -101,7 +101,7 @@ public:
     int PtableLen[2 * MAX_CHANNELS]; // Nr of Ptable entries used for this frame
     int16_t ICoefA[2 * MAX_CHANNELS][1 << SIZE_CODEDPREDORDER]; // Integer coefs for actual coding
     int DSTCoded; // 1=DST coded is put in DST stream, 0=DSD is put in DST stream
-    long CalcNrOfBytes; // Contains number of bytes of the complete
+    size_t CalcNrOfBytes; // Contains number of bytes of the complete
     long CalcNrOfBits; // Contains number of bits of the complete channel stream after arithmetic encoding (also containing bytestuff-, ICoefA-bits, etc.)
     int HalfProb[MAX_CHANNELS]; // Defines per channel which probability is applied for the first PredOrder[] bits of a frame (0 = use Ptable entry, 1 = 128)
     int NrOfHalfBits[MAX_CHANNELS]; // Defines per channel how many bits at the start of each frame are optionally coded with p=0.5
@@ -117,8 +117,8 @@ public:
     int PSameMapAllCh; // 1 if all channels have same Ptablemap
     int MaxNrOfFilters; // Max. nr. of filters allowed per frame
     int MaxNrOfPtables; // Max. nr. of Ptables allowed per frame
-    long MaxFrameLen; // Max frame length of this file
-    long NrOfBitsPerCh; // MaxFrameLen * RESOL
+    size_t MaxFrameLen; // Max frame length of this file
+    size_t NrOfBitsPerCh; // MaxFrameLen * RESOL
 };
 
 typedef uint8_t ADataByte;
