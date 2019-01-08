@@ -50,6 +50,7 @@ int g_nThreads = 2;
 vector<TrackInfo> g_arrQueue;
 pthread_mutex_t g_hMutex = PTHREAD_MUTEX_INITIALIZER;
 string g_strOut = "";
+int g_StdOut = 0;
 int g_nSampleRate = 96000;
 bool g_bProgressLine = false;
 int g_nFinished = 0;
@@ -257,7 +258,7 @@ public:
 
         if (tMediaType == UNK_TYPE)
         {
-            printf("PANIC: exception_io_unsupported_format\n");
+            fprintf(stderr, "PANIC: exception_io_unsupported_format\n");
             return 0;
         }
 
@@ -265,7 +266,7 @@ public:
 
         if (!m_pSacdMedia)
         {
-            printf("PANIC: exception_overflow\n");
+            fprintf(stderr, "PANIC: exception_overflow\n");
             return 0;
         }
 
@@ -275,7 +276,7 @@ public:
                 m_pSacdReader = new sacd_disc_t;
                 if (!m_pSacdReader)
                 {
-                    printf("PANIC: exception_overflow\n");
+                    fprintf(stderr, "PANIC: exception_overflow\n");
                     return 0;
                 }
                 break;
@@ -283,7 +284,7 @@ public:
                 m_pSacdReader = new sacd_dsdiff_t;
                 if (!m_pSacdReader)
                 {
-                    printf("PANIC: exception_overflow\n");
+                    fprintf(stderr, "PANIC: exception_overflow\n");
                     return 0;
                 }
                 break;
@@ -291,25 +292,25 @@ public:
                 m_pSacdReader = new sacd_dsf_t;
                 if (!m_pSacdReader)
                 {
-                    printf("PANIC: exception_overflow\n");
+                    fprintf(stderr, "PANIC: exception_overflow\n");
                     return 0;
                 }
                 break;
             default:
-                printf("PANIC: exception_io_data\n");
+                fprintf(stderr, "PANIC: exception_io_data\n");
                 return 0;
                 break;
         }
 
         if (!m_pSacdMedia->open(p_path.c_str()))
         {
-            printf("PANIC: exception_io_data\n");
+            fprintf(stderr, "PANIC: exception_io_data\n");
             return 0;
         }
 
         if ((m_nTracks = m_pSacdReader->open(m_pSacdMedia)) == 0)
         {
-            printf("PANIC: Failed to parse SACD media\n");
+            fprintf(stderr, "PANIC: Failed to parse SACD media\n");
             return 0;
         }
 
@@ -556,14 +557,14 @@ void * fnProgress (void* threadargs)
 
         if (g_bProgressLine)
         {
-            printf("PROGRESS\t%.2f\n", fProgress);
+            fprintf(stderr, "PROGRESS\t%.2f\n", fProgress);
         }
         else
         {
-            printf("\r%.2f%%", fProgress);
+            fprintf(stderr, "\r%.2f%%", fProgress);
         }
 
-        fflush(stdout);
+        fflush(stderr);
 
         if (g_nFinished == nTracks)
         {
@@ -612,7 +613,7 @@ void * fnDecoder (void* threadargs)
         memcpy (arrHeader + 44, arrSubtype, 16);
         memcpy (arrHeader + 60, "data", 4);
         packageInt (arrHeader, 64, nSize - 68, 4);
-        FILE * pFile = fopen(strOutFile.data(), "wb");
+        FILE * pFile = (g_StdOut == 0) ? fopen(strOutFile.data(), "wb") : stdout;
         fwrite(arrHeader, 1, 68, pFile);
 
         bool bDone = false;
@@ -631,7 +632,7 @@ void * fnDecoder (void* threadargs)
 
         if (g_bProgressLine)
         {
-            printf("FILE\t%s\t%.2i\t%.2i\n", strOutFile.data(), cTrackInfo.nTrack + 1, pSACD->m_nTracks);
+            fprintf(stderr, "FILE\t%s\t%.2i\t%.2i\n", strOutFile.data(), cTrackInfo.nTrack + 1, pSACD->m_nTracks);
         }
 
         g_nFinished++;
@@ -666,6 +667,8 @@ int main(int argc, char* argv[])
     "  -o, --outdir         : The folder to write the WAVE files to. If you omit\n"
     "                         this, the files will be placed in the input file's\n"
     "                         directory\n"
+    "  -c, --stdout         : Stdout output (for pipe), sample:\n"
+    "                         sacd -i file.dsf -c | play -\n"
     "  -r, --rate           : The output samplerate.\n"
     "                         Valid rates are: 88200, 96000, 176400 and 192000.\n"
     "                         If you omit this, 96KHz will be used.\n"
@@ -681,6 +684,7 @@ int main(int argc, char* argv[])
     {
         {"infile", required_argument, NULL, 'i' },
         {"outdir", required_argument, NULL, 'o' },
+        {"stdout", no_argument, NULL, 'c'},
         {"rate", required_argument, NULL, 'r' },
         {"stereo", no_argument, NULL, 's'},
         {"progress", no_argument, NULL, 'p'},
@@ -688,7 +692,7 @@ int main(int argc, char* argv[])
         { NULL, 0, NULL, 0 }
     };
 
-    while ((nOpt = getopt_long(argc, argv, "i:o:r:sph", tOptionsTable, NULL)) >= 0)
+    while ((nOpt = getopt_long(argc, argv, "i:o:cr:sph", tOptionsTable, NULL)) >= 0)
     {
         switch (nOpt)
         {
@@ -697,6 +701,9 @@ int main(int argc, char* argv[])
                 break;
             case 'o':
                 g_strOut = optarg;
+                break;
+            case 'c':
+                g_StdOut = 1;
                 break;
             case 'r':
             {
@@ -708,7 +715,7 @@ int main(int argc, char* argv[])
                 }
                 else
                 {
-                    printf("PANIC: Invalid samplerate\n");
+                    fprintf(stderr, "PANIC: Invalid samplerate\n");
                     return 0;
                 }
                 break;
@@ -727,7 +734,7 @@ int main(int argc, char* argv[])
 
     if (bPrintHelp || argc == 1 || strIn.empty())
     {
-        printf(g_bProgressLine ? "PANIC: Invalid command-line syntax\n" : strHelpText);
+        fprintf(stderr, g_bProgressLine ? "PANIC: Invalid command-line syntax\n" : strHelpText);
         return 0;
     }
 
@@ -735,7 +742,7 @@ int main(int argc, char* argv[])
 
     if (stat(strIn.c_str(), &tStat) == -1 || !S_ISREG(tStat.st_mode))
     {
-        printf("PANIC: Input file does not exist\n");
+        fprintf(stderr, "PANIC: Input file does not exist\n");
         return 0;
     }
 
@@ -748,7 +755,7 @@ int main(int argc, char* argv[])
 
     if (g_strOut.empty() || stat(g_strOut.c_str(), &tStat) == -1 || !S_ISDIR(tStat.st_mode))
     {
-        printf("PANIC: Output directory does not exist\n");
+        fprintf(stderr, "PANIC: Output directory does not exist\n");
         return 0;
     }
 
@@ -768,7 +775,7 @@ int main(int argc, char* argv[])
 
     if (!g_bProgressLine)
     {
-        printf("\n\nsacd - Command-line SACD decoder version %s\n\n", APPVERSION);
+        fprintf(stderr, "\n\nsacd - Command-line SACD decoder version %s\n\n", APPVERSION);
     }
 
     int nTwoch = pSacd->m_pSacdReader->get_track_count(AREA_TWOCH);
@@ -821,11 +828,11 @@ int main(int argc, char* argv[])
     {
         if (g_bProgressLine)
         {
-            printf("WARNINGThe multichannel and stereo areas have a different track count: extracting both.\n");
+            fprintf(stderr, "WARNINGThe multichannel and stereo areas have a different track count: extracting both.\n");
         }
         else
         {
-            printf("WARNING: The multichannel and stereo areas have a different track count: extracting both.\n\n");
+            fprintf(stderr, "WARNING: The multichannel and stereo areas have a different track count: extracting both.\n\n");
         }
     }
 
@@ -859,11 +866,11 @@ int main(int argc, char* argv[])
 
     if (g_bProgressLine)
     {
-        printf("FINISHED\t%d\n", nSeconds);
+        fprintf(stderr, "FINISHED\t%d\n", nSeconds);
     }
     else
     {
-        printf("\nFinished in %d seconds.\n\n", nSeconds);
+        fprintf(stderr, "\nFinished in %d seconds.\n\n", nSeconds);
     }
 
     return 0;

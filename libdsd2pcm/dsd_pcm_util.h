@@ -22,6 +22,10 @@
 
 #include <memory.h>
 #include <stdlib.h>
+#ifndef _ISOC11_SOURCE
+#include <malloc.h>
+#endif
+
 
 class DSDPCMUtil
 {
@@ -30,7 +34,11 @@ public:
 
     static void* mem_alloc(size_t size)
     {
+#ifdef _ISOC11_SOURCE
         void* memory = aligned_alloc(MEM_ALIGN, size);
+#else
+        void* memory = memalign(MEM_ALIGN, size);
+#endif
 
         if (memory)
         {
