@@ -1,5 +1,5 @@
 /*
-    Copyright 2015-2018 Robert Tari <robert.tari@gmail.com>
+    Copyright 2015-2019 Robert Tari <robert@tari.in>
     Copyright 2012 Vladislav Goncharov <vl-g@yandex.ru>
     Copyright 2011-2016 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
 
@@ -50,7 +50,7 @@ int g_nThreads = 2;
 vector<TrackInfo> g_arrQueue;
 pthread_mutex_t g_hMutex = PTHREAD_MUTEX_INITIALIZER;
 string g_strOut = "";
-int g_nSampleRate = 96000;
+int g_nSampleRate = 88200;
 bool g_bProgressLine = false;
 int g_nFinished = 0;
 area_id_e g_nArea = AREA_MULCH;
@@ -657,6 +657,7 @@ int main(int argc, char* argv[])
     string strIn = "";
     char strPath[PATH_MAX];
     int nOpt;
+    bool bPrintDetails = false;
     bool bPrintHelp = false;
 
     const char strHelpText[] =
@@ -668,13 +669,14 @@ int main(int argc, char* argv[])
     "                         directory\n"
     "  -r, --rate           : The output samplerate.\n"
     "                         Valid rates are: 88200, 96000, 176400 and 192000.\n"
-    "                         If you omit this, 96KHz will be used.\n"
+    "                         If you omit this, 88.2KHz will be used.\n"
     "  -s, --stereo         : Only extract the 2-channel area if it exists.\n"
     "                         If you omit this, the multichannel area will have priority.\n"
     "  -p, --progress       : Display progress to new lines. Use this if you intend\n"
     "                         to parse the output through a script. This option only\n"
     "                         lists either one progress percentage per line, or one\n"
     "                         status/error message.\n"
+    "  -d, --details        : Show detailed information about the input\n"
     "  -h, --help           : Show this help message\n\n";
 
     const struct option tOptionsTable[] =
@@ -684,11 +686,12 @@ int main(int argc, char* argv[])
         {"rate", required_argument, NULL, 'r' },
         {"stereo", no_argument, NULL, 's'},
         {"progress", no_argument, NULL, 'p'},
+        {"details", no_argument, NULL, 'd'},
         {"help", no_argument, NULL, 'h' },
         { NULL, 0, NULL, 0 }
     };
 
-    while ((nOpt = getopt_long(argc, argv, "i:o:r:sph", tOptionsTable, NULL)) >= 0)
+    while ((nOpt = getopt_long(argc, argv, "i:o:r:spdh", tOptionsTable, NULL)) >= 0)
     {
         switch (nOpt)
         {
@@ -718,6 +721,9 @@ int main(int argc, char* argv[])
                 break;
             case 'p':
                 g_bProgressLine = true;
+                break;
+            case 'd':
+                bPrintDetails = true;
                 break;
             default:
                 bPrintHelp = true;
@@ -768,11 +774,63 @@ int main(int argc, char* argv[])
 
     if (!g_bProgressLine)
     {
-        printf("\n\nsacd - Command-line SACD decoder version %s\n\n", APPVERSION);
+        printf("\n\nsacd\n----\nCommand-line SACD decoder\nversion %s\n\n", APPVERSION);
     }
 
     int nTwoch = pSacd->m_pSacdReader->get_track_count(AREA_TWOCH);
     int nMulch = pSacd->m_pSacdReader->get_track_count(AREA_MULCH);
+
+    if (bPrintDetails)
+    {
+        printf("STEREO AREA TRACK LIST:\n");
+        printf("-----------------------\n\n");
+
+        if (nTwoch > 0)
+        {
+            for (int i = 0; i < nTwoch; i++)
+            {
+                TrackDetails cTrackDetails;
+
+                pSacd->m_pSacdReader->getTrackDetails(i, AREA_TWOCH, &cTrackDetails);
+
+                printf("TRACK: %i\n", i + 1);
+                printf("ARTIST: %s\n", cTrackDetails.strArtist.data());
+                printf("TITLE: %s\n", cTrackDetails.strTitle.data());
+                printf("CHANNELS: %i\n", cTrackDetails.nChannels);
+                printf("SAMPLE RATE: %.4fMHz\n\n", (float)cTrackDetails.nSampleRate / 1000000);
+            }
+        }
+        else
+        {
+            printf("No tracks.\n\n");
+        }
+
+        printf("MULTICHANNEL AREA TRACK LIST:\n");
+        printf("-----------------------------\n\n");
+
+        if (nMulch > 0)
+        {
+            for (int i = 0; i < nMulch; i++)
+            {
+                TrackDetails cTrackDetails;
+                pSacd->m_pSacdReader->getTrackDetails(i, AREA_MULCH, &cTrackDetails);
+
+                printf("TRACK: %i\n", i + 1);
+                printf("ARTIST: %s\n", cTrackDetails.strArtist.data());
+                printf("TITLE: %s\n", cTrackDetails.strTitle.data());
+                printf("CHANNELS: %i\n", cTrackDetails.nChannels);
+                printf("SAMPLE RATE: %.4fMHz\n\n", (float)cTrackDetails.nSampleRate / 1000000);
+            }
+        }
+        else
+        {
+            printf("No tracks.\n\n");
+        }
+
+        delete pSacd;
+        return 0;
+    }
+
     bool bWarn = false;
     area_id_e nArea;
 
