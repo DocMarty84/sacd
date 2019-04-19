@@ -1,5 +1,6 @@
-/*
-    Copyright 2015-2019 Robert Tari <robert@tari.in>
+    Copyright 2015-2016 Robert Tari <robert.tari@gmail.com>
+    Copyright 2012 Vladislav Goncharov <vl-g@yandex.ru>
+    Copyright 2011-2016 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
 
     This file is part of SACD.
 
@@ -15,7 +16,3 @@
 
     You should have received a copy of the GNU General Public License
     along with SACD.  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
-*/
-
-#define APPVERSION "19.3.21"
-
