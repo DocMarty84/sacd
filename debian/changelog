@@ -1,3 +1,9 @@
+sacd (19.7.16) xenial; urgency=medium
+
+  * Make sure aligned_alloc uses multiple of the alignment (LP: #1836478)
+
+ -- Robert Tari <robert@tari.in>  Tue, 16 Jul 2019 00:34:52 +0200
+
 sacd (19.5.3) xenial; urgency=medium
 
   * Fixed uneven padding error in DSDIFF

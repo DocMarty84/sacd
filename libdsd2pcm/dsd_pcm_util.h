@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2015-2016 Robert Tari <robert@tari.in>
+    Copyright (c) 2015-2019 Robert Tari <robert@tari.in>
     Copyright (c) 2011-2015 Maxim V.Anisiutkin <maxim.anisiutkin@gmail.com>
 
     This file is part of SACD.
@@ -22,6 +22,7 @@
 
 #include <memory.h>
 #include <stdlib.h>
+#include <math.h>
 
 class DSDPCMUtil
 {
@@ -30,7 +31,7 @@ public:
 
     static void* mem_alloc(size_t size)
     {
-        void* memory = aligned_alloc(MEM_ALIGN, size);
+        void* memory = aligned_alloc(MEM_ALIGN, MEM_ALIGN * (size_t)ceil((double)size / (double)MEM_ALIGN));
 
         if (memory)
         {
